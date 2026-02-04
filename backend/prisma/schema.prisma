@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Recipe {
+  id              String   @id @default(cuid())
+  name            String
+  category        String
+  preparationTime Int
+  ingredients     Json
+  steps           String[]
+  pricePerPerson  Float
+  nutrition       Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  weeklyMenu   WeeklyMenu? @relation(fields: [weeklyMenuId], references: [id])
+  weeklyMenuId String?
+}
+
+model WeeklyMenu {
+  id           String   @id @default(cuid())
+  userId       String?
+  mealsCount   Int
+  personsCount Int
+  recipes      Recipe[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ExcludedTag {
+  id     String  @id @default(cuid())
+  name   String
+  userId String?
+
+  @@unique([name, userId])
+}
