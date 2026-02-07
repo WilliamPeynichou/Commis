@@ -3,7 +3,7 @@ import type {
   ShoppingItem,
   ShoppingCategory,
   ShoppingListResponse,
-} from '@recipe-planner/shared';
+} from '../../../shared/src/index';
 
 export function generateShoppingList(recipes: Recipe[]): ShoppingListResponse {
   const ingredientMap = new Map<string, ShoppingItem>();

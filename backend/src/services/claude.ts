@@ -4,7 +4,7 @@ import type {
   RegenerateRecipeRequest,
   Recipe,
   RecipeCategory,
-} from '@recipe-planner/shared';
+} from '../../../shared/src/index';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -69,11 +69,12 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans tex
 function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
   const { category, personsCount, excludedTags } = request;
 
-  const budgetRange = {
+  const budgetRanges: Record<RecipeCategory, string> = {
     economique: 'moins de 5€ par personne',
     gourmand: 'entre 5€ et 10€ par personne',
     plaisir: 'plus de 10€ par personne',
-  }[category];
+  };
+  const budgetRange = budgetRanges[category];
 
   return `Tu es un chef cuisinier expert. Génère UNE SEULE nouvelle recette de catégorie "${category}" (budget : ${budgetRange}).
 
