@@ -19,9 +19,17 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [shoppingList, setShoppingList] = useState<ShoppingListResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<GenerateRecipesRequest | null>(null);
+
+  const refreshShoppingList = useCallback(async (updatedRecipes: Recipe[], personsCount: number) => {
+    try {
+      const result = await api.generateShoppingList({ recipes: updatedRecipes, personsCount });
+      setShoppingList(result);
+    } catch {
+      // Shopping list update is non-critical, silently fail
+    }
+  }, []);
 
   const handleGenerate = useCallback(async (request: GenerateRecipesRequest) => {
     setIsGenerating(true);
@@ -32,6 +40,7 @@ export default function App() {
       const result = await api.generateRecipes(request);
       setRecipes(result.recipes);
       toast.success(`${result.recipes.length} recettes générées !`);
+      await refreshShoppingList(result.recipes, request.personsCount);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Erreur lors de la génération'
@@ -39,7 +48,7 @@ export default function App() {
     } finally {
       setIsGenerating(false);
     }
-  }, []);
+  }, [refreshShoppingList]);
 
   const handleRegenerateOne = useCallback(
     async (index: number) => {
@@ -51,13 +60,14 @@ export default function App() {
           category: recipes[index].category,
           personsCount: lastRequest.personsCount,
           excludedTags: lastRequest.excludedTags,
+          timeFilter: lastRequest.timeFilter,
+          healthy: lastRequest.healthy,
         });
-        setRecipes((prev) => {
-          const updated = [...prev];
-          updated[index] = result.recipe;
-          return updated;
-        });
+        const updated = [...recipes];
+        updated[index] = result.recipe;
+        setRecipes(updated);
         toast.success('Recette regénérée !');
+        await refreshShoppingList(updated, lastRequest.personsCount);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Erreur lors de la regénération'
@@ -66,7 +76,7 @@ export default function App() {
         setRegeneratingIndex(null);
       }
     },
-    [lastRequest, recipes]
+    [lastRequest, recipes, refreshShoppingList]
   );
 
   const handleRegenerateAll = useCallback(async () => {
@@ -77,6 +87,7 @@ export default function App() {
       const result = await api.generateRecipes(lastRequest);
       setRecipes(result.recipes);
       toast.success('Toutes les recettes ont été regénérées !');
+      await refreshShoppingList(result.recipes, lastRequest.personsCount);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Erreur lors de la regénération'
@@ -84,25 +95,7 @@ export default function App() {
     } finally {
       setIsRegeneratingAll(false);
     }
-  }, [lastRequest]);
-
-  const handleExportShoppingList = useCallback(async () => {
-    if (recipes.length === 0 || !lastRequest) return;
-    setIsExporting(true);
-    try {
-      const result = await api.generateShoppingList({
-        recipes,
-        personsCount: lastRequest.personsCount,
-      });
-      setShoppingList(result);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Erreur lors de la génération de la liste'
-      );
-    } finally {
-      setIsExporting(false);
-    }
-  }, [recipes, lastRequest]);
+  }, [lastRequest, refreshShoppingList]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -135,21 +128,23 @@ export default function App() {
                 recipes={recipes}
                 onRegenerateOne={handleRegenerateOne}
                 onRegenerateAll={handleRegenerateAll}
-                onExportShoppingList={handleExportShoppingList}
                 regeneratingIndex={regeneratingIndex}
                 isRegeneratingAll={isRegeneratingAll}
-                isExporting={isExporting}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
         <AnimatePresence>
-          {shoppingList && (
-            <ShoppingList
-              shoppingList={shoppingList}
-              onClose={() => setShoppingList(null)}
-            />
+          {shoppingList && !isGenerating && (
+            <motion.div
+              key="shopping"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <ShoppingList shoppingList={shoppingList} />
+            </motion.div>
           )}
         </AnimatePresence>
       </main>

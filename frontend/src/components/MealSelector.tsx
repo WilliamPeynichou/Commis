@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed, Clock, Heart } from 'lucide-react';
 import { BrutalButton } from './ui/BrutalButton';
 import { BrutalSlider } from './ui/BrutalSlider';
 import { ExclusionTags } from './ExclusionTags';
-import type { GenerateRecipesRequest, CategoryDistribution } from '@shared/index';
+import type { GenerateRecipesRequest, CategoryDistribution, TimeFilter } from '@shared/index';
 
 interface MealSelectorProps {
   onGenerate: (request: GenerateRecipesRequest) => void;
@@ -66,6 +66,13 @@ function NumberStepper({
   );
 }
 
+const TIME_OPTIONS: { value: TimeFilter; label: string; sublabel: string }[] = [
+  { value: 'any', label: 'Peu importe', sublabel: 'Toute durée' },
+  { value: 'quick', label: 'Rapide', sublabel: '< 20 min' },
+  { value: 'medium', label: 'Moyen', sublabel: '20 – 30 min' },
+  { value: 'long', label: 'Long', sublabel: '> 60 min' },
+];
+
 export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
   const [mealsCount, setMealsCount] = useState(7);
   const [personsCount, setPersonsCount] = useState(2);
@@ -75,6 +82,8 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
     plaisir: 1,
   });
   const [excludedTags, setExcludedTags] = useState<string[]>([]);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('any');
+  const [healthy, setHealthy] = useState(false);
 
   const totalCategories = categories.economique + categories.gourmand + categories.plaisir;
   const isValid = totalCategories === mealsCount;
@@ -99,7 +108,7 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onGenerate({ mealsCount, categories, personsCount, excludedTags });
+    onGenerate({ mealsCount, categories, personsCount, excludedTags, timeFilter, healthy });
   };
 
   return (
@@ -220,6 +229,93 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 h-0.5 bg-deep-black/10 rounded-full" />
+        <span className="text-xs font-bold uppercase tracking-widest text-deep-black/30">
+          Filtres
+        </span>
+        <div className="flex-1 h-0.5 bg-deep-black/10 rounded-full" />
+      </div>
+
+      {/* Time filter */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock size={16} strokeWidth={2.5} className="text-deep-black/50" />
+          <span className="font-bold text-sm uppercase tracking-wide text-deep-black/60">
+            Temps de préparation
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {TIME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setTimeFilter(opt.value)}
+              className={`relative flex flex-col items-center gap-1 py-3 px-4 rounded-2xl border-2 transition-all font-semibold text-sm
+                ${timeFilter === opt.value
+                  ? 'border-deep-black bg-mauve shadow-[0_4px_0_0_rgba(26,26,26,0.6)] -translate-y-0.5'
+                  : 'border-deep-black/20 bg-white hover:border-deep-black/50 hover:bg-mauve/20'
+                }`}
+            >
+              <span className="font-bold text-sm">{opt.label}</span>
+              <span className="text-xs font-medium text-deep-black/50">{opt.sublabel}</span>
+              {timeFilter === opt.value && (
+                <motion.div
+                  layoutId="time-indicator"
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-deep-black rounded-full flex items-center justify-center"
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                >
+                  <div className="w-1.5 h-1.5 bg-mauve rounded-full" />
+                </motion.div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Healthy toggle */}
+      <div>
+        <button
+          onClick={() => setHealthy((v) => !v)}
+          className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 transition-all
+            ${healthy
+              ? 'border-deep-black bg-mint shadow-[0_4px_0_0_rgba(26,26,26,0.5)] -translate-y-0.5'
+              : 'border-deep-black/20 bg-white hover:border-deep-black/40 hover:bg-mint/20'
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <motion.div
+              animate={{ scale: healthy ? 1.1 : 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            >
+              <Heart
+                size={22}
+                strokeWidth={2.5}
+                className={healthy ? 'text-deep-black fill-deep-black/20' : 'text-deep-black/40'}
+              />
+            </motion.div>
+            <div className="text-left">
+              <p className={`font-bold text-sm ${healthy ? 'text-deep-black' : 'text-deep-black/60'}`}>
+                Mode Healthy
+              </p>
+              <p className="text-xs text-deep-black/40 font-medium mt-0.5">
+                Recettes équilibrées, riches en légumes et protéines maigres
+              </p>
+            </div>
+          </div>
+          <div
+            className={`relative w-12 h-6 rounded-full border-2 transition-colors flex items-center
+              ${healthy ? 'border-deep-black bg-deep-black' : 'border-deep-black/25 bg-deep-black/10'}`}
+          >
+            <motion.div
+              animate={{ x: healthy ? 22 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className={`w-4 h-4 rounded-full ${healthy ? 'bg-mint' : 'bg-deep-black/30'}`}
+            />
+          </div>
+        </button>
       </div>
 
       {/* Divider */}

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, ShoppingCart, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 import { RecipeCard } from './RecipeCard';
 import { BrutalButton } from './ui/BrutalButton';
 import type { Recipe } from '@shared/index';
@@ -9,20 +9,16 @@ interface RecipeGridProps {
   recipes: Recipe[];
   onRegenerateOne: (index: number) => void;
   onRegenerateAll: () => void;
-  onExportShoppingList: () => void;
   regeneratingIndex: number | null;
   isRegeneratingAll: boolean;
-  isExporting: boolean;
 }
 
 export function RecipeGrid({
   recipes,
   onRegenerateOne,
   onRegenerateAll,
-  onExportShoppingList,
   regeneratingIndex,
   isRegeneratingAll,
-  isExporting,
 }: RecipeGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -70,36 +66,22 @@ export function RecipeGrid({
               Vos {recipes.length} recettes
             </h2>
             <p className="text-xs text-deep-black/40 font-medium mt-0.5">
-              Survolez les cartes pour l'effet 3D — cliquez "i" pour les détails
+              Cliquez "Regénérer" sur une carte pour la remplacer individuellement
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <BrutalButton
-            variant="mauve"
-            size="md"
-            onClick={onRegenerateAll}
-            isLoading={isRegeneratingAll}
-          >
-            <span className="flex items-center gap-2">
-              <RefreshCw size={16} strokeWidth={3} />
-              Tout regénérer
-            </span>
-          </BrutalButton>
-
-          <BrutalButton
-            variant="orange"
-            size="md"
-            onClick={onExportShoppingList}
-            isLoading={isExporting}
-          >
-            <span className="flex items-center gap-2">
-              <ShoppingCart size={16} strokeWidth={3} />
-              Liste de courses
-            </span>
-          </BrutalButton>
-        </div>
+        <BrutalButton
+          variant="mauve"
+          size="md"
+          onClick={onRegenerateAll}
+          isLoading={isRegeneratingAll}
+        >
+          <span className="flex items-center gap-2">
+            <RefreshCw size={16} strokeWidth={3} />
+            Tout regénérer
+          </span>
+        </BrutalButton>
       </motion.div>
 
       {/* Recipe grid with staggered asymmetric layout */}

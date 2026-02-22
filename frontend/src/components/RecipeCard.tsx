@@ -136,26 +136,32 @@ export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: Reci
 
               {/* Content */}
               <div className="p-6 flex-1 flex flex-col gap-5">
-                {/* Ingredients preview as chips */}
+                {/* Description */}
+                {recipe.description && (
+                  <p className="text-sm text-deep-black/65 leading-relaxed italic border-l-2 pl-3"
+                    style={{ borderColor: catStyle.stripColor }}>
+                    {recipe.description}
+                  </p>
+                )}
+
+                {/* Ingredients */}
                 <div>
                   <h4 className="font-bold text-xs uppercase tracking-widest text-deep-black/40 mb-3">
                     Ingrédients
                   </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {recipe.ingredients.slice(0, 6).map((ing, i) => (
-                      <span
+                  <ul className="space-y-1.5">
+                    {recipe.ingredients.map((ing, i) => (
+                      <li
                         key={i}
-                        className="text-xs font-medium bg-pale-yellow/60 border border-deep-black/10 rounded-full px-2.5 py-1"
+                        className="flex justify-between items-center py-1 px-3 rounded-xl hover:bg-pale-yellow/30 transition-colors"
                       >
-                        {ing.name}
-                      </span>
+                        <span className="font-medium text-sm text-deep-black/80">{ing.name}</span>
+                        <span className="font-mono text-xs text-deep-black/50 bg-pale-yellow/50 px-2 py-0.5 rounded-lg ml-2 shrink-0">
+                          {ing.quantity} {ing.unit}
+                        </span>
+                      </li>
                     ))}
-                    {recipe.ingredients.length > 6 && (
-                      <span className="text-xs font-bold text-deep-black/30 px-2 py-1">
-                        +{recipe.ingredients.length - 6}
-                      </span>
-                    )}
-                  </div>
+                  </ul>
                 </div>
 
                 {/* Expandable steps */}
@@ -237,33 +243,24 @@ export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: Reci
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-1">
+                <div className="pt-1">
                   <BrutalButton
                     variant="mauve"
                     size="sm"
                     onClick={() => onRegenerate(index)}
                     isLoading={isRegenerating}
-                    className="flex-1"
+                    className="w-full"
                   >
                     <span className="flex items-center justify-center gap-2">
                       <RefreshCw size={14} strokeWidth={3} />
-                      Regénérer
+                      Regénérer cette recette
                     </span>
                   </BrutalButton>
-
-                  <button
-                    onClick={() => setIsFlipped(true)}
-                    className="w-11 h-11 rounded-2xl border-2 border-deep-black/15 bg-off-white flex items-center justify-center hover:bg-pale-yellow/50 transition-colors"
-                    title="Voir les détails"
-                    style={{ boxShadow: '0 3px 0 0 rgba(26,26,26,0.15)' }}
-                  >
-                    <span className="text-sm font-bold">i</span>
-                  </button>
                 </div>
               </div>
             </motion.div>
           ) : (
-            /* ===== BACK FACE (Details) ===== */
+            /* ===== BACK FACE (Detailed nutrition) ===== */
             <motion.div
               key="back"
               initial={{ opacity: 0, rotateY: 90 }}
@@ -283,51 +280,6 @@ export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: Reci
               </div>
 
               <div className="p-6 flex-1 overflow-y-auto space-y-5 max-h-[500px]">
-                {/* Full ingredients */}
-                <div>
-                  <h4 className="font-bold text-xs uppercase tracking-widest text-deep-black/40 mb-3">
-                    Tous les ingrédients
-                  </h4>
-                  <ul className="space-y-2">
-                    {recipe.ingredients.map((ing, i) => (
-                      <li
-                        key={i}
-                        className="flex justify-between items-center py-1.5 px-3 rounded-xl hover:bg-pale-yellow/30 transition-colors"
-                      >
-                        <span className="font-medium text-sm">{ing.name}</span>
-                        <span className="font-mono text-xs text-deep-black/50 bg-pale-yellow/50 px-2.5 py-1 rounded-lg">
-                          {ing.quantity} {ing.unit}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Full steps */}
-                <div>
-                  <h4 className="font-bold text-xs uppercase tracking-widest text-deep-black/40 mb-3">
-                    Toutes les étapes
-                  </h4>
-                  <ol className="space-y-3">
-                    {recipe.steps.map((step, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span
-                          className="flex-shrink-0 w-7 h-7 rounded-lg border-2 border-deep-black flex items-center justify-center font-bold text-xs"
-                          style={{
-                            backgroundColor: catStyle.stripColor,
-                            boxShadow: '0 2px 0 0 rgba(26,26,26,0.4)',
-                          }}
-                        >
-                          {i + 1}
-                        </span>
-                        <p className="text-sm leading-relaxed text-deep-black/80 pt-0.5">
-                          {step}
-                        </p>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-
                 {/* Detailed nutrition */}
                 <div>
                   <h4 className="font-bold text-xs uppercase tracking-widest text-deep-black/40 mb-3">
