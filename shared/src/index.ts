@@ -6,6 +6,8 @@
 
 export type RecipeCategory = 'economique' | 'gourmand' | 'plaisir';
 
+export type TimeFilter = 'quick' | 'medium' | 'long' | 'any';
+
 export interface NutritionInfo {
   calories: number;
   proteins: number;
@@ -24,6 +26,7 @@ export interface Ingredient {
 export interface Recipe {
   id: string;
   name: string;
+  description: string;
   category: RecipeCategory;
   preparationTime: number;
   ingredients: Ingredient[];
@@ -45,6 +48,8 @@ export interface GenerateRecipesRequest {
   categories: CategoryDistribution;
   personsCount: number;
   excludedTags: string[];
+  timeFilter?: TimeFilter;
+  healthy?: boolean;
 }
 
 export interface RegenerateRecipeRequest {
@@ -52,6 +57,8 @@ export interface RegenerateRecipeRequest {
   category: RecipeCategory;
   personsCount: number;
   excludedTags: string[];
+  timeFilter?: TimeFilter;
+  healthy?: boolean;
 }
 
 export interface ShoppingListRequest {
@@ -144,4 +151,11 @@ export const CATEGORY_BUDGET: Record<RecipeCategory, string> = {
   economique: '< 5€/pers.',
   gourmand: '5-10€/pers.',
   plaisir: '> 10€/pers.',
+};
+
+export const TIME_FILTER_LABELS: Record<TimeFilter, string> = {
+  any: 'Peu importe',
+  quick: 'Rapide < 20 min',
+  medium: 'Moyen 20-30 min',
+  long: 'Long > 60 min',
 };

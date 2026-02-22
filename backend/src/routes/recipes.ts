@@ -19,10 +19,10 @@ recipeRoutes.post(
       const recipes = await generateRecipes(req.body);
       res.json({ success: true, data: { recipes } });
     } catch (error) {
-      console.error('Error generating recipes:', error);
+      console.error('[/generate]', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Erreur lors de la génération des recettes',
+        error: 'Erreur lors de la génération des recettes.',
       });
     }
   }
@@ -36,10 +36,10 @@ recipeRoutes.post(
       const recipe = await regenerateRecipe(req.body);
       res.json({ success: true, data: { recipe } });
     } catch (error) {
-      console.error('Error regenerating recipe:', error);
+      console.error('[/regenerate]', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Erreur lors de la regénération de la recette',
+        error: 'Erreur lors de la regénération de la recette.',
       });
     }
   }
@@ -53,10 +53,10 @@ recipeRoutes.post(
       const shoppingList = generateShoppingList(req.body.recipes);
       res.json({ success: true, data: shoppingList });
     } catch (error) {
-      console.error('Error generating shopping list:', error);
+      console.error('[/shopping-list]', error);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de la génération de la liste de courses',
+        error: 'Erreur lors de la génération de la liste de courses.',
       });
     }
   }

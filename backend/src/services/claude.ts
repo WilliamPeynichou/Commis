@@ -4,16 +4,63 @@ import type {
   RegenerateRecipeRequest,
   Recipe,
   RecipeCategory,
+  TimeFilter,
 } from '@recipe-planner/shared';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const MODEL = 'claude-haiku-4-5-20251001';
 
-const MODEL = 'claude-sonnet-4-5-20250929';
+function getClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set in environment variables');
+  }
+  return new Anthropic({ apiKey });
+}
+
+/**
+ * Strip any characters that could be used for prompt injection.
+ * Allows letters (including accented), digits, spaces and common food chars.
+ */
+function sanitizeTag(tag: string): string {
+  return tag
+    .trim()
+    .slice(0, 50) // max 50 chars per tag
+    .replace(/[^\p{L}\p{N}\s\-éèêëàâùûüîïôœæç]/gu, '');
+}
+
+function extractJSON(text: string): string {
+  // Strip markdown code blocks if Claude wraps the response
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    return jsonMatch[1].trim();
+  }
+  return text.trim();
+}
+
+function buildTimeConstraint(timeFilter?: TimeFilter): string {
+  switch (timeFilter) {
+    case 'quick':
+      return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation INFÉRIEUR À 20 MINUTES. Choisir des plats rapides à réaliser.';
+    case 'medium':
+      return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation ENTRE 20 ET 30 MINUTES.';
+    case 'long':
+      return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation SUPÉRIEUR À 60 MINUTES. Choisir des plats mijotés, braisés ou rôtis.';
+    default:
+      return '';
+  }
+}
+
+function buildHealthyConstraint(healthy?: boolean): string {
+  if (!healthy) return '';
+  return `CONTRAINTE SANTÉ : Les recettes doivent être équilibrées et bonnes pour la santé. Privilégier les légumes frais, protéines maigres (poulet, poisson, légumineuses), grains complets et bonnes graisses (huile d'olive, avocat, noix). Limiter les graisses saturées, le sucre ajouté et les produits ultra-transformés.`;
+}
 
 function buildGeneratePrompt(request: GenerateRecipesRequest): string {
-  const { mealsCount, categories, personsCount, excludedTags } = request;
+  const { mealsCount, categories, personsCount, timeFilter, healthy } = request;
+  const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
+
+  const timeConstraint = buildTimeConstraint(timeFilter);
+  const healthyConstraint = buildHealthyConstraint(healthy);
 
   return `Tu es un chef cuisinier expert en planification de repas hebdomadaires équilibrés et économiques en France.
 
@@ -26,6 +73,10 @@ Nombre de personnes : ${personsCount}
 
 ${excludedTags.length > 0 ? `EXCLUSIONS STRICTES (allergies/intolérances) - NE PAS utiliser ces ingrédients : ${excludedTags.join(', ')}` : 'Aucune exclusion alimentaire.'}
 
+${timeConstraint}
+
+${healthyConstraint}
+
 RÈGLES IMPORTANTES :
 1. Adapte toutes les quantités d'ingrédients pour ${personsCount} personne(s)
 2. Varie les types de plats : inclure si possible viandes, poissons, plats végétariens
@@ -35,6 +86,7 @@ RÈGLES IMPORTANTES :
 6. Chaque recette doit avoir entre 5 et 12 ingrédients
 7. Chaque recette doit avoir entre 3 et 8 étapes de préparation
 8. Classe chaque ingrédient dans sa catégorie de courses
+9. La description doit être appétissante et donner envie, en 1 à 2 phrases
 
 Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans texte autour) suivant exactement ce format :
 {
@@ -42,6 +94,7 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans tex
     {
       "id": "un-id-unique",
       "name": "Nom de la recette",
+      "description": "Description appétissante de la recette en 1-2 phrases.",
       "category": "economique" | "gourmand" | "plaisir",
       "preparationTime": 30,
       "ingredients": [
@@ -67,13 +120,18 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans tex
 }
 
 function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
-  const { category, personsCount, excludedTags } = request;
+  const { category, personsCount, timeFilter, healthy } = request;
+  const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
 
-  const budgetRange = {
+  const budgetMap: Record<RecipeCategory, string> = {
     economique: 'moins de 5€ par personne',
     gourmand: 'entre 5€ et 10€ par personne',
     plaisir: 'plus de 10€ par personne',
-  }[category];
+  };
+  const budgetRange = budgetMap[category];
+
+  const timeConstraint = buildTimeConstraint(timeFilter);
+  const healthyConstraint = buildHealthyConstraint(healthy);
 
   return `Tu es un chef cuisinier expert. Génère UNE SEULE nouvelle recette de catégorie "${category}" (budget : ${budgetRange}).
 
@@ -81,18 +139,24 @@ Nombre de personnes : ${personsCount}
 
 ${excludedTags.length > 0 ? `EXCLUSIONS STRICTES : ${excludedTags.join(', ')}` : 'Aucune exclusion.'}
 
+${timeConstraint}
+
+${healthyConstraint}
+
 RÈGLES :
 1. Adapte les quantités pour ${personsCount} personne(s)
 2. Prix réaliste pour le marché français
 3. Recette réalisable par un amateur
 4. Entre 5 et 12 ingrédients, 3 à 8 étapes
 5. Équilibre nutritionnel
+6. La description doit être appétissante en 1-2 phrases
 
 Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) :
 {
   "recipe": {
     "id": "un-id-unique",
     "name": "Nom de la recette",
+    "description": "Description appétissante de la recette en 1-2 phrases.",
     "category": "${category}",
     "preparationTime": 30,
     "ingredients": [
@@ -119,7 +183,7 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) :
 export async function generateRecipes(request: GenerateRecipesRequest): Promise<Recipe[]> {
   const prompt = buildGeneratePrompt(request);
 
-  const message = await anthropic.messages.create({
+  const message = await getClient().messages.create({
     model: MODEL,
     max_tokens: 8192,
     messages: [
@@ -135,14 +199,14 @@ export async function generateRecipes(request: GenerateRecipesRequest): Promise<
     throw new Error('No text response from Claude API');
   }
 
-  const parsed = JSON.parse(textBlock.text);
+  const parsed = JSON.parse(extractJSON(textBlock.text));
   return parsed.recipes as Recipe[];
 }
 
 export async function regenerateRecipe(request: RegenerateRecipeRequest): Promise<Recipe> {
   const prompt = buildRegeneratePrompt(request);
 
-  const message = await anthropic.messages.create({
+  const message = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4096,
     messages: [
@@ -158,6 +222,6 @@ export async function regenerateRecipe(request: RegenerateRecipeRequest): Promis
     throw new Error('No text response from Claude API');
   }
 
-  const parsed = JSON.parse(textBlock.text);
+  const parsed = JSON.parse(extractJSON(textBlock.text));
   return parsed.recipe as Recipe;
 }

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 
+const timeFilterSchema = z.enum(['quick', 'medium', 'long', 'any']).optional();
+
 export const generateRecipesSchema = z.object({
   mealsCount: z.number().int().min(1).max(14),
   categories: z.object({
@@ -9,7 +11,9 @@ export const generateRecipesSchema = z.object({
     plaisir: z.number().int().min(0),
   }),
   personsCount: z.number().int().min(1).max(10),
-  excludedTags: z.array(z.string()),
+  excludedTags: z.array(z.string().max(50)).max(20),
+  timeFilter: timeFilterSchema,
+  healthy: z.boolean().optional(),
 }).refine(
   (data) =>
     data.categories.economique + data.categories.gourmand + data.categories.plaisir === data.mealsCount,
@@ -22,13 +26,16 @@ export const regenerateRecipeSchema = z.object({
   index: z.number().int().min(0),
   category: z.enum(['economique', 'gourmand', 'plaisir']),
   personsCount: z.number().int().min(1).max(10),
-  excludedTags: z.array(z.string()),
+  excludedTags: z.array(z.string().max(50)).max(20),
+  timeFilter: timeFilterSchema,
+  healthy: z.boolean().optional(),
 });
 
 export const shoppingListSchema = z.object({
   recipes: z.array(z.object({
     id: z.string(),
     name: z.string(),
+    description: z.string().optional(),
     category: z.string(),
     preparationTime: z.number(),
     ingredients: z.array(z.object({
