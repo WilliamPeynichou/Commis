@@ -34,10 +34,10 @@ export function Header() {
 
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-deep-black leading-none tracking-tight">
-                Cuisine <span className="text-mauve">de Jade</span>
+                Commis <span className="text-mauve">par Claude</span>
               </h1>
               <p className="text-xs sm:text-sm font-medium text-deep-black/40 mt-0.5">
-                Planification de recettes de cuisine pour jade car elle en peut plus en gros
+                Génère tes recettes de la semaine en quelques secondes
               </p>
             </div>
           </div>
@@ -45,10 +45,10 @@ export function Header() {
           {/* Decorative pills */}
           <div className="hidden sm:flex items-center gap-2">
             <span className="badge-float bg-pale-yellow text-deep-black">
-              Fais par Claude
+              Fait par Claude
             </span>
             <span className="badge-float bg-mauve text-deep-black">
-              Pour Jade
+              IA Culinaire
             </span>
           </div>
         </div>

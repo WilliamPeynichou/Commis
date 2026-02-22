@@ -162,7 +162,7 @@ export default function App() {
             ))}
           </div>
           <p className="font-semibold text-deep-black/30 text-sm">
-            Recipe Planner — Propulsé par Claude AI
+            Commis — Propulsé par Claude AI
           </p>
         </div>
       </footer>
