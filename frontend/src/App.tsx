@@ -66,6 +66,7 @@ export default function App() {
           excludedTags: lastRequest.excludedTags,
           timeFilter: lastRequest.timeFilter,
           healthy: lastRequest.healthy,
+          freeText: lastRequest.freeText,
           currentRecipeName: recipes[index].name,
           // Pass the full history so Claude never repeats any recipe from the session
           existingRecipeNames: recipeHistory.filter((name) => name !== recipes[index].name),

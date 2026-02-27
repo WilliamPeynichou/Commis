@@ -43,11 +43,17 @@ function buildTimeConstraint(timeFilter?: TimeFilter): string {
       return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation INFÉRIEUR À 20 MINUTES. Choisir des plats rapides à réaliser.';
     case 'medium':
       return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation ENTRE 20 ET 30 MINUTES.';
+    case 'extended':
+      return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation ENTRE 30 ET 60 MINUTES. Choisir des plats nécessitant une cuisson modérée.';
     case 'long':
       return 'CONTRAINTE DE TEMPS : Toutes les recettes doivent avoir un temps de préparation SUPÉRIEUR À 60 MINUTES. Choisir des plats mijotés, braisés ou rôtis.';
     default:
       return '';
   }
+}
+
+function sanitizeFreeText(text: string): string {
+  return text.trim().slice(0, 500).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
 function buildHealthyConstraint(healthy?: boolean): string {
@@ -59,6 +65,7 @@ function buildGeneratePrompt(request: GenerateRecipesRequest): string {
   const { mealsCount, categories, personsCount, timeFilter, healthy } = request;
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
   const previousRecipeNames = request.previousRecipeNames ?? [];
+  const freeText = request.freeText ? sanitizeFreeText(request.freeText) : '';
 
   const timeConstraint = buildTimeConstraint(timeFilter);
   const healthyConstraint = buildHealthyConstraint(healthy);
@@ -94,6 +101,8 @@ RÈGLES IMPORTANTES :
 7. Chaque recette doit avoir entre 3 et 8 étapes de préparation
 8. Classe chaque ingrédient dans sa catégorie de courses
 9. La description doit être appétissante et donner envie, en 1 à 2 phrases
+
+${freeText ? `PS - Envie particulière de l'utilisateur à prendre en compte : ${freeText}` : ''}
 
 Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans texte autour) suivant exactement ce format :
 {
@@ -131,6 +140,7 @@ function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
   const currentRecipeName = request.currentRecipeName;
   const existingRecipeNames = request.existingRecipeNames ?? [];
+  const freeText = request.freeText ? sanitizeFreeText(request.freeText) : '';
 
   const budgetMap: Record<RecipeCategory, string> = {
     economique: 'moins de 5€ par personne',
@@ -170,6 +180,8 @@ RÈGLES :
 4. Entre 5 et 12 ingrédients, 3 à 8 étapes
 5. Équilibre nutritionnel
 6. La description doit être appétissante en 1-2 phrases
+
+${freeText ? `PS - Envie particulière de l'utilisateur à prendre en compte : ${freeText}` : ''}
 
 Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) :
 {
