@@ -58,11 +58,18 @@ function buildHealthyConstraint(healthy?: boolean): string {
 function buildGeneratePrompt(request: GenerateRecipesRequest): string {
   const { mealsCount, categories, personsCount, timeFilter, healthy } = request;
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
+  const previousRecipeNames = request.previousRecipeNames ?? [];
 
   const timeConstraint = buildTimeConstraint(timeFilter);
   const healthyConstraint = buildHealthyConstraint(healthy);
 
+  const diversityConstraint = previousRecipeNames.length > 0
+    ? `CONTRAINTE DE DIVERSITÉ ABSOLUE : Ces recettes ont déjà été proposées — tu DOIS proposer des recettes entièrement différentes avec d'autres plats, d'autres ingrédients principaux et d'autres cuisines : ${previousRecipeNames.join(', ')}`
+    : '';
+
   return `Tu es un chef cuisinier expert en planification de repas hebdomadaires équilibrés et économiques en France.
+
+${diversityConstraint}
 
 Génère exactement ${mealsCount} recettes avec la répartition suivante :
 - ${categories.economique} recette(s) "économique" (budget < 5€ par personne)
@@ -122,6 +129,8 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans tex
 function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
   const { category, personsCount, timeFilter, healthy } = request;
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
+  const currentRecipeName = request.currentRecipeName;
+  const existingRecipeNames = request.existingRecipeNames ?? [];
 
   const budgetMap: Record<RecipeCategory, string> = {
     economique: 'moins de 5€ par personne',
@@ -133,7 +142,18 @@ function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
   const timeConstraint = buildTimeConstraint(timeFilter);
   const healthyConstraint = buildHealthyConstraint(healthy);
 
+  const recipesToAvoid = [
+    ...(currentRecipeName ? [currentRecipeName] : []),
+    ...existingRecipeNames,
+  ];
+
+  const diversityConstraint = recipesToAvoid.length > 0
+    ? `CONTRAINTE DE DIVERSITÉ ABSOLUE : Tu DOIS proposer une recette complètement différente — autre plat, autres ingrédients principaux, autre style de cuisine. NE GÉNÈRE PAS ces recettes déjà présentes dans le menu : ${recipesToAvoid.join(', ')}`
+    : '';
+
   return `Tu es un chef cuisinier expert. Génère UNE SEULE nouvelle recette de catégorie "${category}" (budget : ${budgetRange}).
+
+${diversityConstraint}
 
 Nombre de personnes : ${personsCount}
 
@@ -186,6 +206,7 @@ export async function generateRecipes(request: GenerateRecipesRequest): Promise<
   const message = await getClient().messages.create({
     model: MODEL,
     max_tokens: 8192,
+    temperature: 1.0,
     messages: [
       {
         role: 'user',
@@ -209,6 +230,7 @@ export async function regenerateRecipe(request: RegenerateRecipeRequest): Promis
   const message = await getClient().messages.create({
     model: MODEL,
     max_tokens: 4096,
+    temperature: 1.0,
     messages: [
       {
         role: 'user',

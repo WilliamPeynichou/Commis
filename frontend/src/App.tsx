@@ -62,6 +62,8 @@ export default function App() {
           excludedTags: lastRequest.excludedTags,
           timeFilter: lastRequest.timeFilter,
           healthy: lastRequest.healthy,
+          currentRecipeName: recipes[index].name,
+          existingRecipeNames: recipes.filter((_, i) => i !== index).map((r) => r.name),
         });
         const updated = [...recipes];
         updated[index] = result.recipe;
@@ -84,7 +86,10 @@ export default function App() {
     setIsRegeneratingAll(true);
     setShoppingList(null);
     try {
-      const result = await api.generateRecipes(lastRequest);
+      const result = await api.generateRecipes({
+        ...lastRequest,
+        previousRecipeNames: recipes.map((r) => r.name),
+      });
       setRecipes(result.recipes);
       toast.success('Toutes les recettes ont été regénérées !');
       await refreshShoppingList(result.recipes, lastRequest.personsCount);

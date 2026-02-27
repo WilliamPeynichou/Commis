@@ -50,6 +50,7 @@ export interface GenerateRecipesRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  previousRecipeNames?: string[];
 }
 
 export interface RegenerateRecipeRequest {
@@ -59,6 +60,8 @@ export interface RegenerateRecipeRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  currentRecipeName?: string;
+  existingRecipeNames?: string[];
 }
 
 export interface ShoppingListRequest {
