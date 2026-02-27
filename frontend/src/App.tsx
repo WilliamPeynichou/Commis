@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { MealSelector } from './components/MealSelector';
 import { RecipeGrid } from './components/RecipeGrid';
 import { ShoppingList } from './components/ShoppingList';
+import { StoreComparison } from './components/StoreComparison';
 import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
 import * as api from './lib/api';
@@ -158,8 +159,10 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="space-y-12"
             >
               <ShoppingList shoppingList={shoppingList} />
+              <StoreComparison totalEstimatedPrice={shoppingList.totalEstimatedPrice} />
             </motion.div>
           )}
         </AnimatePresence>
