@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed, Clock, Heart } from 'lucide-react';
+import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed, Clock, Heart, MessageSquare } from 'lucide-react';
 import { BrutalButton } from './ui/BrutalButton';
 import { BrutalSlider } from './ui/BrutalSlider';
 import { ExclusionTags } from './ExclusionTags';
@@ -70,6 +70,7 @@ const TIME_OPTIONS: { value: TimeFilter; label: string; sublabel: string }[] = [
   { value: 'any', label: 'Peu importe', sublabel: 'Toute durée' },
   { value: 'quick', label: 'Rapide', sublabel: '< 20 min' },
   { value: 'medium', label: 'Moyen', sublabel: '20 – 30 min' },
+  { value: 'extended', label: 'Intermédiaire', sublabel: '30 – 60 min' },
   { value: 'long', label: 'Long', sublabel: '> 60 min' },
 ];
 
@@ -84,6 +85,7 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
   const [excludedTags, setExcludedTags] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('any');
   const [healthy, setHealthy] = useState(false);
+  const [freeText, setFreeText] = useState('');
 
   const totalCategories = categories.economique + categories.gourmand + categories.plaisir;
   const isValid = totalCategories === mealsCount;
@@ -108,7 +110,7 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onGenerate({ mealsCount, categories, personsCount, excludedTags, timeFilter, healthy });
+    onGenerate({ mealsCount, categories, personsCount, excludedTags, timeFilter, healthy, freeText: freeText.trim() || undefined });
   };
 
   return (
@@ -248,7 +250,7 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
             Temps de préparation
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {TIME_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -333,6 +335,29 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
         onAdd={(tag) => setExcludedTags((prev) => [...prev, tag])}
         onRemove={(tag) => setExcludedTags((prev) => prev.filter((t) => t !== tag))}
       />
+
+      {/* Envie particulière */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={16} strokeWidth={2.5} className="text-deep-black/50" />
+          <span className="font-bold text-sm uppercase tracking-wide text-deep-black/60">
+            Envie particulière
+          </span>
+          <span className="text-xs text-deep-black/30 font-medium ml-1">(optionnel)</span>
+        </div>
+        <div className="relative">
+          <textarea
+            value={freeText}
+            onChange={(e) => setFreeText(e.target.value.slice(0, 500))}
+            placeholder="Ex : moins de 500 calories par repas, une recette sucré-salé, des plats sans cuisson…"
+            rows={3}
+            className="w-full px-4 py-3 rounded-2xl border-2 border-deep-black/20 bg-white font-medium text-sm text-deep-black placeholder:text-deep-black/30 focus:outline-none focus:border-deep-black/60 resize-none transition-colors"
+          />
+          <span className="absolute bottom-3 right-4 text-xs text-deep-black/25 font-medium select-none">
+            {freeText.length}/500
+          </span>
+        </div>
+      </div>
 
       {/* Submit */}
       <BrutalButton

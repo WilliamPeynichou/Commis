@@ -6,7 +6,7 @@
 
 export type RecipeCategory = 'economique' | 'gourmand' | 'plaisir';
 
-export type TimeFilter = 'quick' | 'medium' | 'long' | 'any';
+export type TimeFilter = 'quick' | 'medium' | 'extended' | 'long' | 'any';
 
 export interface NutritionInfo {
   calories: number;
@@ -50,6 +50,8 @@ export interface GenerateRecipesRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  previousRecipeNames?: string[];
+  freeText?: string;
 }
 
 export interface RegenerateRecipeRequest {
@@ -59,6 +61,9 @@ export interface RegenerateRecipeRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  currentRecipeName?: string;
+  existingRecipeNames?: string[];
+  freeText?: string;
 }
 
 export interface ShoppingListRequest {
@@ -157,5 +162,6 @@ export const TIME_FILTER_LABELS: Record<TimeFilter, string> = {
   any: 'Peu importe',
   quick: 'Rapide < 20 min',
   medium: 'Moyen 20-30 min',
+  extended: 'Intermédiaire 30-60 min',
   long: 'Long > 60 min',
 };
