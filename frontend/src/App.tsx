@@ -21,6 +21,8 @@ export default function App() {
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const [shoppingList, setShoppingList] = useState<ShoppingListResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<GenerateRecipesRequest | null>(null);
+  // Accumulates ALL recipe names ever shown during the session so Claude never repeats them
+  const [recipeHistory, setRecipeHistory] = useState<string[]>([]);
 
   const refreshShoppingList = useCallback(async (updatedRecipes: Recipe[], personsCount: number) => {
     try {
@@ -36,9 +38,11 @@ export default function App() {
     setRecipes([]);
     setShoppingList(null);
     setLastRequest(request);
+    setRecipeHistory([]);
     try {
       const result = await api.generateRecipes(request);
       setRecipes(result.recipes);
+      setRecipeHistory(result.recipes.map((r) => r.name));
       toast.success(`${result.recipes.length} recettes générées !`);
       await refreshShoppingList(result.recipes, request.personsCount);
     } catch (error) {
@@ -63,11 +67,14 @@ export default function App() {
           timeFilter: lastRequest.timeFilter,
           healthy: lastRequest.healthy,
           currentRecipeName: recipes[index].name,
-          existingRecipeNames: recipes.filter((_, i) => i !== index).map((r) => r.name),
+          // Pass the full history so Claude never repeats any recipe from the session
+          existingRecipeNames: recipeHistory.filter((name) => name !== recipes[index].name),
         });
         const updated = [...recipes];
         updated[index] = result.recipe;
         setRecipes(updated);
+        // Add the new recipe name to history so future regenerations avoid it too
+        setRecipeHistory((prev) => [...new Set([...prev, result.recipe.name])]);
         toast.success('Recette regénérée !');
         await refreshShoppingList(updated, lastRequest.personsCount);
       } catch (error) {
@@ -78,7 +85,7 @@ export default function App() {
         setRegeneratingIndex(null);
       }
     },
-    [lastRequest, recipes, refreshShoppingList]
+    [lastRequest, recipes, recipeHistory, refreshShoppingList]
   );
 
   const handleRegenerateAll = useCallback(async () => {
@@ -88,9 +95,12 @@ export default function App() {
     try {
       const result = await api.generateRecipes({
         ...lastRequest,
-        previousRecipeNames: recipes.map((r) => r.name),
+        // Pass the full history so Claude avoids every recipe seen this session
+        previousRecipeNames: recipeHistory,
       });
       setRecipes(result.recipes);
+      // Accumulate new recipe names into history
+      setRecipeHistory((prev) => [...new Set([...prev, ...result.recipes.map((r) => r.name)])]);
       toast.success('Toutes les recettes ont été regénérées !');
       await refreshShoppingList(result.recipes, lastRequest.personsCount);
     } catch (error) {
@@ -100,7 +110,7 @@ export default function App() {
     } finally {
       setIsRegeneratingAll(false);
     }
-  }, [lastRequest, refreshShoppingList]);
+  }, [lastRequest, recipeHistory, refreshShoppingList]);
 
   return (
     <div className="min-h-screen flex flex-col">
