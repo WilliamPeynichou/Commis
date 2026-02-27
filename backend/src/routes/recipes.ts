@@ -50,7 +50,7 @@ recipeRoutes.post(
   validate(shoppingListSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const shoppingList = generateShoppingList(req.body.recipes);
+      const shoppingList = generateShoppingList(req.body.recipes, req.body.personsCount);
       res.json({ success: true, data: shoppingList });
     } catch (error) {
       console.error('[/shopping-list]', error);
