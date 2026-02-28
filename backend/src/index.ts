@@ -14,6 +14,10 @@ for (const key of REQUIRED_ENV) {
   }
 }
 
+if (!process.env.DATABASE_URL) {
+  console.warn('[WARN] DATABASE_URL not set — recipe history persistence disabled.');
+}
+
 const PORT = Number(process.env.PORT) || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -33,7 +37,7 @@ app.use(cors({
     callback(new Error('CORS: origin not allowed'));
   },
   methods: ['POST'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'X-Session-Id'],
   credentials: false,
 }));
 
