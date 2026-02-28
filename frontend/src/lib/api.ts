@@ -14,6 +14,7 @@ const API_BASE = '/api/recipes';
 async function request<T>(url: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${url}`, {
     method: 'POST',
+    credentials: 'include', // send HttpOnly auth cookie
     headers: {
       'Content-Type': 'application/json',
       'X-Session-Id': getSessionId(),

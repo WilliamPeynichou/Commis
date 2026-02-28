@@ -7,11 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id        String   @id @default(cuid())
-  sessionId String   @unique
-  email     String?  @unique
-  name      String?
+  username  String   @unique
+  email     String   @unique
+  password  String?  // null for Google-only accounts
+  googleId  String?  @unique
+  avatarUrl String?
+  role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -23,12 +31,13 @@ model RecipeHistory {
   id        String   @id @default(cuid())
   name      String
   category  String
-  sessionId String
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String?  // anonymous users
+  userId    String?  // authenticated users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([name, sessionId])
+  @@unique([name, userId])
   @@index([sessionId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
 }
