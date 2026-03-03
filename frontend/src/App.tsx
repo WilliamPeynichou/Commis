@@ -32,8 +32,9 @@ function AppContent() {
     try {
       const result = await api.generateShoppingList({ recipes: updatedRecipes, personsCount });
       setShoppingList(result);
-    } catch {
-      // Shopping list update is non-critical, silently fail
+    } catch (err) {
+      console.error('[shopping-list]', err);
+      toast.error('La liste de courses n\'a pas pu être générée.');
     }
   }, []);
 
