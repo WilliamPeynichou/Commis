@@ -93,6 +93,16 @@ export async function upsertGoogleUser(data: {
   });
 }
 
+/** Returns auth method info for an email (used to give specific login/register errors). */
+export async function findUserAuthInfo(email: string): Promise<{ hasPassword: boolean; hasGoogleId: boolean } | null> {
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: { password: true, googleId: true },
+  });
+  if (!user) return null;
+  return { hasPassword: !!user.password, hasGoogleId: !!user.googleId };
+}
+
 /** Checks whether a username already exists. */
 export async function isUsernameTaken(username: string): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
