@@ -13,9 +13,12 @@ RUN npm ci
 COPY shared/ ./shared/
 COPY backend/ ./backend/
 
+# Generate Prisma client (needed before tsc so Role enum and row types exist)
+RUN cd backend && npx prisma generate
+
 # Compile backend (shared types are import type → erased at compile time)
 RUN cd backend && npx tsc
 
 EXPOSE 3001
 
-CMD ["node", "backend/dist/index.js"]
+CMD ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
