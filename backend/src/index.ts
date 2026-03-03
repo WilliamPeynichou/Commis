@@ -33,6 +33,9 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── App ───────────────────────────────────────────────────────────────────────
 const app = express();
 
+// Trust Railway's reverse proxy so express-rate-limit can read the real client IP
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 // CORS — credentials: true required for HttpOnly cookie auth
