@@ -8,6 +8,7 @@ import { ShoppingList } from './components/ShoppingList';
 import { StoreComparison } from './components/StoreComparison';
 import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
+import { AuthProvider } from './contexts/AuthContext';
 import * as api from './lib/api';
 import type {
   Recipe,
@@ -15,7 +16,7 @@ import type {
   ShoppingListResponse,
 } from '@shared/index';
 
-export default function App() {
+function AppContent() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
@@ -69,13 +70,11 @@ export default function App() {
           healthy: lastRequest.healthy,
           freeText: lastRequest.freeText,
           currentRecipeName: recipes[index].name,
-          // Pass the full history so Claude never repeats any recipe from the session
           existingRecipeNames: recipeHistory.filter((name) => name !== recipes[index].name),
         });
         const updated = [...recipes];
         updated[index] = result.recipe;
         setRecipes(updated);
-        // Add the new recipe name to history so future regenerations avoid it too
         setRecipeHistory((prev) => [...new Set([...prev, result.recipe.name])]);
         toast.success('Recette regénérée !');
         await refreshShoppingList(updated, lastRequest.personsCount);
@@ -97,11 +96,9 @@ export default function App() {
     try {
       const result = await api.generateRecipes({
         ...lastRequest,
-        // Pass the full history so Claude avoids every recipe seen this session
         previousRecipeNames: recipeHistory,
       });
       setRecipes(result.recipes);
-      // Accumulate new recipe names into history
       setRecipeHistory((prev) => [...new Set([...prev, ...result.recipes.map((r) => r.name)])]);
       toast.success('Toutes les recettes ont été regénérées !');
       await refreshShoppingList(result.recipes, lastRequest.personsCount);
@@ -168,7 +165,6 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Footer */}
       <footer className="border-t-2 border-deep-black/10 bg-off-white/80 backdrop-blur-sm mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-3">
           <div className="flex gap-1.5">
@@ -186,5 +182,13 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
