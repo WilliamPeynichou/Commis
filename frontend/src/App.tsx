@@ -5,8 +5,10 @@ import { Header } from './components/Header';
 import { MealSelector } from './components/MealSelector';
 import { RecipeGrid } from './components/RecipeGrid';
 import { ShoppingList } from './components/ShoppingList';
+import { StoreComparison } from './components/StoreComparison';
 import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
+import { AuthProvider } from './contexts/AuthContext';
 import * as api from './lib/api';
 import type {
   Recipe,
@@ -14,13 +16,15 @@ import type {
   ShoppingListResponse,
 } from '@shared/index';
 
-export default function App() {
+function AppContent() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const [shoppingList, setShoppingList] = useState<ShoppingListResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<GenerateRecipesRequest | null>(null);
+  // Accumulates ALL recipe names ever shown during the session so Claude never repeats them
+  const [recipeHistory, setRecipeHistory] = useState<string[]>([]);
 
   const refreshShoppingList = useCallback(async (updatedRecipes: Recipe[], personsCount: number) => {
     try {
@@ -36,9 +40,11 @@ export default function App() {
     setRecipes([]);
     setShoppingList(null);
     setLastRequest(request);
+    setRecipeHistory([]);
     try {
       const result = await api.generateRecipes(request);
       setRecipes(result.recipes);
+      setRecipeHistory(result.recipes.map((r) => r.name));
       toast.success(`${result.recipes.length} recettes générées !`);
       await refreshShoppingList(result.recipes, request.personsCount);
     } catch (error) {
@@ -62,10 +68,14 @@ export default function App() {
           excludedTags: lastRequest.excludedTags,
           timeFilter: lastRequest.timeFilter,
           healthy: lastRequest.healthy,
+          freeText: lastRequest.freeText,
+          currentRecipeName: recipes[index].name,
+          existingRecipeNames: recipeHistory.filter((name) => name !== recipes[index].name),
         });
         const updated = [...recipes];
         updated[index] = result.recipe;
         setRecipes(updated);
+        setRecipeHistory((prev) => [...new Set([...prev, result.recipe.name])]);
         toast.success('Recette regénérée !');
         await refreshShoppingList(updated, lastRequest.personsCount);
       } catch (error) {
@@ -76,7 +86,7 @@ export default function App() {
         setRegeneratingIndex(null);
       }
     },
-    [lastRequest, recipes, refreshShoppingList]
+    [lastRequest, recipes, recipeHistory, refreshShoppingList]
   );
 
   const handleRegenerateAll = useCallback(async () => {
@@ -84,8 +94,12 @@ export default function App() {
     setIsRegeneratingAll(true);
     setShoppingList(null);
     try {
-      const result = await api.generateRecipes(lastRequest);
+      const result = await api.generateRecipes({
+        ...lastRequest,
+        previousRecipeNames: recipeHistory,
+      });
       setRecipes(result.recipes);
+      setRecipeHistory((prev) => [...new Set([...prev, ...result.recipes.map((r) => r.name)])]);
       toast.success('Toutes les recettes ont été regénérées !');
       await refreshShoppingList(result.recipes, lastRequest.personsCount);
     } catch (error) {
@@ -95,7 +109,7 @@ export default function App() {
     } finally {
       setIsRegeneratingAll(false);
     }
-  }, [lastRequest, refreshShoppingList]);
+  }, [lastRequest, recipeHistory, refreshShoppingList]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -142,14 +156,15 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="space-y-12"
             >
               <ShoppingList shoppingList={shoppingList} />
+              <StoreComparison totalEstimatedPrice={shoppingList.totalEstimatedPrice} />
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* Footer */}
       <footer className="border-t-2 border-deep-black/10 bg-off-white/80 backdrop-blur-sm mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-3">
           <div className="flex gap-1.5">
@@ -167,5 +182,13 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { generateRecipes, regenerateRecipe } from '../services/claude';
 import { generateShoppingList } from '../services/shopping';
+import { getHistory, saveToHistory } from '../services/historyService';
 import {
   validate,
   generateRecipesSchema,
@@ -11,19 +12,37 @@ import {
 
 export const recipeRoutes = Router();
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function extractSessionId(req: Request): string | null {
+  const raw = req.headers['x-session-id'];
+  const id = Array.isArray(raw) ? raw[0] : raw;
+  return id && UUID_RE.test(id) ? id : null;
+}
+
 recipeRoutes.post(
   '/generate',
   validate(generateRecipesSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const recipes = await generateRecipes(req.body);
+      // Authenticated user takes priority over anonymous session
+      const userId = req.user?.id ?? null;
+      const sessionId = userId ? null : extractSessionId(req);
+
+      const dbHistory = await getHistory({ userId, sessionId });
+      const merged = [...new Set([...dbHistory, ...(req.body.previousRecipeNames ?? [])])];
+
+      const recipes = await generateRecipes({ ...req.body, previousRecipeNames: merged });
+
+      void saveToHistory(
+        recipes.map((r) => ({ name: r.name, category: r.category })),
+        { userId, sessionId }
+      );
+
       res.json({ success: true, data: { recipes } });
     } catch (error) {
       console.error('[/generate]', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la génération des recettes.',
-      });
+      res.status(500).json({ success: false, error: 'Erreur lors de la génération des recettes.' });
     }
   }
 );
@@ -33,14 +52,23 @@ recipeRoutes.post(
   validate(regenerateRecipeSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const recipe = await regenerateRecipe(req.body);
+      const userId = req.user?.id ?? null;
+      const sessionId = userId ? null : extractSessionId(req);
+
+      const dbHistory = await getHistory({ userId, sessionId });
+      const merged = [...new Set([...dbHistory, ...(req.body.existingRecipeNames ?? [])])];
+
+      const recipe = await regenerateRecipe({ ...req.body, existingRecipeNames: merged });
+
+      void saveToHistory(
+        [{ name: recipe.name, category: recipe.category }],
+        { userId, sessionId }
+      );
+
       res.json({ success: true, data: { recipe } });
     } catch (error) {
       console.error('[/regenerate]', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la regénération de la recette.',
-      });
+      res.status(500).json({ success: false, error: 'Erreur lors de la regénération de la recette.' });
     }
   }
 );
@@ -50,14 +78,11 @@ recipeRoutes.post(
   validate(shoppingListSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const shoppingList = generateShoppingList(req.body.recipes);
+      const shoppingList = generateShoppingList(req.body.recipes, req.body.personsCount);
       res.json({ success: true, data: shoppingList });
     } catch (error) {
       console.error('[/shopping-list]', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la génération de la liste de courses.',
-      });
+      res.status(500).json({ success: false, error: 'Erreur lors de la génération de la liste de courses.' });
     }
   }
 );
