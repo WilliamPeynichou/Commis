@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { MealSelector } from './components/MealSelector';
 import { RecipeGrid } from './components/RecipeGrid';
@@ -8,7 +9,8 @@ import { ShoppingList } from './components/ShoppingList';
 import { StoreComparison } from './components/StoreComparison';
 import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminDashboard } from './pages/AdminDashboard';
 import * as api from './lib/api';
 import type {
   Recipe,
@@ -185,10 +187,27 @@ function AppContent() {
   );
 }
 
+function ProtectedAdminRoute() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-off-white">
+      <div className="w-8 h-8 border-4 border-mauve border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (!user || user.role !== 'ADMIN') return <Navigate to="/" replace />;
+  return <AdminDashboard />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/admin" element={<ProtectedAdminRoute />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ChevronDown, Shield } from 'lucide-react';
+import { LogOut, ChevronDown, Shield, LayoutDashboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 export function UserMenu() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -84,6 +86,15 @@ export function UserMenu() {
 
             {/* Actions */}
             <div className="p-1.5">
+              {user.role === 'ADMIN' && (
+                <button
+                  onClick={() => { navigate('/admin'); setOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-dark-orange hover:bg-dark-orange/5 rounded-xl transition-colors"
+                >
+                  <LayoutDashboard size={14} strokeWidth={2.5} />
+                  Dashboard Admin
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-deep-black/70 hover:text-dark-orange hover:bg-dark-orange/5 rounded-xl transition-colors"

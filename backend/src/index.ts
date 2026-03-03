@@ -7,6 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { recipeRoutes } from './routes/recipes';
 import { authRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import { extractUser } from './middleware/authenticate';
 import { prisma } from './lib/prisma';
 
@@ -45,7 +46,7 @@ app.use(cors({
     if (origin === FRONTEND_URL) return callback(null, true);
     callback(new Error('CORS: origin not allowed'));
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH'],
   allowedHeaders: ['Content-Type', 'X-Session-Id', 'Authorization'],
   credentials: true,
 }));
@@ -82,6 +83,14 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Trop de tentatives, réessayez dans 15 minutes.' },
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Limite admin atteinte, réessayez dans une minute.' },
+});
+
 app.use(globalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -91,6 +100,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/recipes', claudeLimiter, recipeRoutes);
+app.use('/api/admin', adminLimiter, adminRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
