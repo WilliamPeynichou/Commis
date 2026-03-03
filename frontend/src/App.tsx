@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Header } from './components/Header';
@@ -11,6 +11,7 @@ import { BrutalToaster } from './components/ui/BrutalToast';
 import { AuthModal } from './components/AuthModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import * as api from './lib/api';
+import { getFavorites, addFavorite, removeFavorite } from './lib/favoritesApi';
 import type {
   Recipe,
   GenerateRecipesRequest,
@@ -23,6 +24,37 @@ function AppContent() {
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+
+  // Load favorite ids on mount / when user changes
+  useEffect(() => {
+    if (!user) { setFavoritedIds(new Set()); return; }
+    getFavorites()
+      .then((favs) => setFavoritedIds(new Set(favs.map((r) => r.id))))
+      .catch(() => {});
+  }, [user]);
+
+  const handleToggleFavorite = useCallback(async (recipe: Recipe) => {
+    if (favoritedIds.has(recipe.id)) {
+      setFavoritedIds((prev) => { const s = new Set(prev); s.delete(recipe.id); return s; });
+      try {
+        await removeFavorite(recipe.id);
+        toast.success('Retiré des favoris');
+      } catch {
+        setFavoritedIds((prev) => new Set([...prev, recipe.id]));
+        toast.error('Impossible de retirer le favori');
+      }
+    } else {
+      setFavoritedIds((prev) => new Set([...prev, recipe.id]));
+      try {
+        await addFavorite(recipe.id);
+        toast.success('Ajouté aux favoris ♥');
+      } catch {
+        setFavoritedIds((prev) => { const s = new Set(prev); s.delete(recipe.id); return s; });
+        toast.error('Impossible d\'ajouter le favori');
+      }
+    }
+  }, [favoritedIds]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
@@ -209,6 +241,8 @@ function AppContent() {
                 onRegenerateAll={handleRegenerateAll}
                 regeneratingIndex={regeneratingIndex}
                 isRegeneratingAll={isRegeneratingAll}
+                favoritedIds={favoritedIds}
+                onToggleFavorite={handleToggleFavorite}
               />
             </motion.div>
           )}

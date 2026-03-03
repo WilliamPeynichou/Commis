@@ -11,6 +11,7 @@ import {
   Wheat,
   Droplets,
   Leaf,
+  Heart,
 } from 'lucide-react';
 import { BrutalBadge } from './ui/BrutalBadge';
 import { BrutalButton } from './ui/BrutalButton';
@@ -21,8 +22,10 @@ import { CATEGORY_LABELS } from '@shared/index';
 interface RecipeCardProps {
   recipe: Recipe;
   index: number;
-  onRegenerate: (index: number) => void;
-  isRegenerating: boolean;
+  onRegenerate?: (index: number) => void;
+  isRegenerating?: boolean;
+  isFavorited?: boolean;
+  onToggleFavorite?: (recipe: Recipe) => void;
 }
 
 const categoryStyles: Record<
@@ -66,7 +69,7 @@ const nutritionIcons = [
   { key: 'fiber', label: 'Fib', unit: 'g', icon: Leaf, color: 'text-mint' },
 ] as const;
 
-export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: RecipeCardProps) {
+export function RecipeCard({ recipe, index, onRegenerate, isRegenerating = false, isFavorited = false, onToggleFavorite }: RecipeCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const { ref, style, glareStyle, handlers } = use3DTilt({ maxTilt: 6, scale: 1.02 });
@@ -117,9 +120,25 @@ export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: Reci
                   <h3 className="font-bold text-lg leading-snug pr-2 flex-1">
                     {recipe.name}
                   </h3>
-                  <BrutalBadge variant={catStyle.badge}>
-                    {CATEGORY_LABELS[recipe.category]}
-                  </BrutalBadge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onToggleFavorite && (
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => onToggleFavorite(recipe)}
+                        className="p-1.5 rounded-xl hover:bg-deep-black/10 transition-colors"
+                        title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                      >
+                        <Heart
+                          size={18}
+                          strokeWidth={2.5}
+                          className={isFavorited ? 'fill-dark-orange text-dark-orange' : 'text-deep-black/40'}
+                        />
+                      </motion.button>
+                    )}
+                    <BrutalBadge variant={catStyle.badge}>
+                      {CATEGORY_LABELS[recipe.category]}
+                    </BrutalBadge>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4 mt-3">
@@ -243,20 +262,22 @@ export function RecipeCard({ recipe, index, onRegenerate, isRegenerating }: Reci
                 </div>
 
                 {/* Actions */}
-                <div className="pt-1">
-                  <BrutalButton
-                    variant="mauve"
-                    size="sm"
-                    onClick={() => onRegenerate(index)}
-                    isLoading={isRegenerating}
-                    className="w-full"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <RefreshCw size={14} strokeWidth={3} />
-                      Regénérer cette recette
-                    </span>
-                  </BrutalButton>
-                </div>
+                {onRegenerate && (
+                  <div className="pt-1">
+                    <BrutalButton
+                      variant="mauve"
+                      size="sm"
+                      onClick={() => onRegenerate(index)}
+                      isLoading={isRegenerating}
+                      className="w-full"
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <RefreshCw size={14} strokeWidth={3} />
+                        Regénérer cette recette
+                      </span>
+                    </BrutalButton>
+                  </div>
+                )}
               </div>
             </motion.div>
           ) : (

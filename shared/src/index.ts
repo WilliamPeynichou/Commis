@@ -43,6 +43,14 @@ export interface CategoryDistribution {
   plaisir: number;
 }
 
+export interface Diet {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  forbiddenIngredients: string[];
+}
+
 export interface GenerateRecipesRequest {
   mealsCount: number;
   categories: CategoryDistribution;
@@ -50,6 +58,7 @@ export interface GenerateRecipesRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  dietIds?: string[];
   previousRecipeNames?: string[];
   freeText?: string;
 }
@@ -61,6 +70,7 @@ export interface RegenerateRecipeRequest {
   excludedTags: string[];
   timeFilter?: TimeFilter;
   healthy?: boolean;
+  dietIds?: string[];
   currentRecipeName?: string;
   existingRecipeNames?: string[];
   freeText?: string;

@@ -14,6 +14,7 @@ export const generateRecipesSchema = z.object({
   excludedTags: z.array(z.string().max(50)).max(20),
   timeFilter: timeFilterSchema,
   healthy: z.boolean().optional(),
+  dietIds: z.array(z.string().max(30)).max(14).optional(),
   previousRecipeNames: z.array(z.string().max(100)).max(50).optional(),
   freeText: z.string().max(500).optional(),
 }).refine(
@@ -31,6 +32,7 @@ export const regenerateRecipeSchema = z.object({
   excludedTags: z.array(z.string().max(50)).max(20),
   timeFilter: timeFilterSchema,
   healthy: z.boolean().optional(),
+  dietIds: z.array(z.string().max(30)).max(14).optional(),
   currentRecipeName: z.string().max(100).optional(),
   existingRecipeNames: z.array(z.string().max(100)).max(50).optional(),
   freeText: z.string().max(500).optional(),
