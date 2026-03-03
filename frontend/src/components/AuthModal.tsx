@@ -14,11 +14,13 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Form state
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const clearError = () => setError('');
 
@@ -27,6 +29,10 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
     setIsLoading(true);
     setError('');
     try {
+      if (tab === 'register' && password !== confirmPassword) {
+        setError('Les mots de passe ne correspondent pas.');
+        return;
+      }
       if (tab === 'login') {
         await login(email, password);
       } else {
@@ -79,7 +85,7 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
             {(['login', 'register'] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => { setTab(t); clearError(); }}
+                onClick={() => { setTab(t); clearError(); setConfirmPassword(''); }}
                 className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
                   tab === t
                     ? 'bg-white shadow-sm text-deep-black border border-deep-black/10'
@@ -185,6 +191,43 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
                 </button>
               </div>
             </div>
+
+            {/* Confirm password (register only) */}
+            <AnimatePresence mode="wait">
+              {tab === 'register' && (
+                <motion.div
+                  key="confirm"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <label className="block text-xs font-semibold text-deep-black/50 mb-1.5 uppercase tracking-wide">
+                    Confirmer le mot de passe
+                  </label>
+                  <div className="relative">
+                    <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-deep-black/30" />
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required={tab === 'register'}
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-10 py-3 bg-white border-2 border-deep-black/15 rounded-2xl text-sm font-medium placeholder:text-deep-black/25 focus:outline-none focus:border-mauve transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-deep-black/30 hover:text-deep-black/60 transition-colors"
+                    >
+                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Error */}
             <AnimatePresence>

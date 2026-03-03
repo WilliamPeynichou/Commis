@@ -7,6 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { recipeRoutes } from './routes/recipes';
 import { authRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import { extractUser } from './middleware/authenticate';
 import { prisma } from './lib/prisma';
 
@@ -42,7 +43,7 @@ app.use(cors({
     if (origin === FRONTEND_URL) return callback(null, true);
     callback(new Error('CORS: origin not allowed'));
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'DELETE'],
   allowedHeaders: ['Content-Type', 'X-Session-Id', 'Authorization'],
   credentials: true,
 }));
@@ -88,6 +89,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/recipes', claudeLimiter, recipeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

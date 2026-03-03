@@ -76,3 +76,11 @@ model ExcludedTag {
 
   @@unique([name, userId])
 }
+
+model BlacklistedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  bannedBy  String   // admin user id
+  createdAt DateTime @default(now())
+}
