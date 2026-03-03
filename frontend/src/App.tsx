@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -9,9 +9,11 @@ import { ShoppingList } from './components/ShoppingList';
 import { StoreComparison } from './components/StoreComparison';
 import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
+import { AuthModal } from './components/AuthModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AdminDashboard } from './pages/AdminDashboard';
 import * as api from './lib/api';
+import { getFavorites, addFavorite, removeFavorite } from './lib/favoritesApi';
 import type {
   Recipe,
   GenerateRecipesRequest,
@@ -19,7 +21,42 @@ import type {
 } from '@shared/index';
 
 function AppContent() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
+
+  // Load favorite ids on mount / when user changes
+  useEffect(() => {
+    if (!user) { setFavoritedIds(new Set()); return; }
+    getFavorites()
+      .then((favs) => setFavoritedIds(new Set(favs.map((r) => r.id))))
+      .catch(() => {});
+  }, [user]);
+
+  const handleToggleFavorite = useCallback(async (recipe: Recipe) => {
+    if (favoritedIds.has(recipe.id)) {
+      setFavoritedIds((prev) => { const s = new Set(prev); s.delete(recipe.id); return s; });
+      try {
+        await removeFavorite(recipe.id);
+        toast.success('Retiré des favoris');
+      } catch {
+        setFavoritedIds((prev) => new Set([...prev, recipe.id]));
+        toast.error('Impossible de retirer le favori');
+      }
+    } else {
+      setFavoritedIds((prev) => new Set([...prev, recipe.id]));
+      try {
+        await addFavorite(recipe.id);
+        toast.success('Ajouté aux favoris ♥');
+      } catch {
+        setFavoritedIds((prev) => { const s = new Set(prev); s.delete(recipe.id); return s; });
+        toast.error('Impossible d\'ajouter le favori');
+      }
+    }
+  }, [favoritedIds]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
@@ -27,6 +64,11 @@ function AppContent() {
   const [lastRequest, setLastRequest] = useState<GenerateRecipesRequest | null>(null);
   // Accumulates ALL recipe names ever shown during the session so Claude never repeats them
   const [recipeHistory, setRecipeHistory] = useState<string[]>([]);
+
+  function openAuth(tab: 'login' | 'register') {
+    setAuthTab(tab);
+    setShowAuth(true);
+  }
 
   const refreshShoppingList = useCallback(async (updatedRecipes: Recipe[], personsCount: number) => {
     try {
@@ -114,6 +156,61 @@ function AppContent() {
     }
   }, [lastRequest, recipeHistory, refreshShoppingList]);
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <BrutalToaster />
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Spinner />
+        </main>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <BrutalToaster />
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center space-y-6 max-w-md"
+          >
+            <h1 className="text-4xl sm:text-5xl font-black text-deep-black tracking-tight">
+              Commis
+            </h1>
+            <p className="text-deep-black/60 text-base sm:text-lg">
+              Planifiez vos repas de la semaine et générez vos recettes avec l'IA.
+              Connectez-vous pour commencer.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => openAuth('login')}
+                className="px-6 py-3 bg-mauve border-2 border-deep-black text-deep-black font-bold shadow-brutal hover:translate-x-0.5 hover:translate-y-0.5 transition-transform"
+              >
+                Se connecter
+              </button>
+              <button
+                onClick={() => openAuth('register')}
+                className="px-6 py-3 bg-off-white border-2 border-deep-black text-deep-black font-bold shadow-brutal hover:translate-x-0.5 hover:translate-y-0.5 transition-transform"
+              >
+                Créer un compte
+              </button>
+            </div>
+          </motion.div>
+        </main>
+        <AnimatePresence>
+          {showAuth && (
+            <AuthModal onClose={() => setShowAuth(false)} initialTab={authTab} />
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <BrutalToaster />
@@ -147,6 +244,8 @@ function AppContent() {
                 onRegenerateAll={handleRegenerateAll}
                 regeneratingIndex={regeneratingIndex}
                 isRegeneratingAll={isRegeneratingAll}
+                favoritedIds={favoritedIds}
+                onToggleFavorite={handleToggleFavorite}
               />
             </motion.div>
           )}

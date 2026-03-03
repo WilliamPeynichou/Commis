@@ -16,8 +16,9 @@ import {
   createUser,
   upsertGoogleUser,
   isUsernameTaken,
-  isEmailTaken,
+  findUserAuthInfo,
 } from '../services/userService';
+import { prisma } from '../lib/prisma';
 
 export const authRoutes = Router();
 
@@ -62,8 +63,18 @@ authRoutes.post('/register', async (req: Request, res: Response): Promise<void> 
     res.status(409).json({ success: false, error: 'Ce pseudo est déjà utilisé.' });
     return;
   }
-  if (await isEmailTaken(email)) {
-    res.status(409).json({ success: false, error: 'Cet email est déjà enregistré.' });
+  const banned = await prisma.blacklistedEmail.findUnique({ where: { email: email.toLowerCase() }, select: { id: true } });
+  if (banned) {
+    res.status(403).json({ success: false, error: 'Cette adresse email ne peut pas être utilisée pour créer un compte.' });
+    return;
+  }
+
+  const emailAuthInfo = await findUserAuthInfo(email);
+  if (emailAuthInfo) {
+    const error = !emailAuthInfo.hasPassword && emailAuthInfo.hasGoogleId
+      ? 'Ce compte existe déjà via Google. Connectez-vous avec Google.'
+      : 'Cet email est déjà enregistré.';
+    res.status(409).json({ success: false, error });
     return;
   }
 
@@ -91,7 +102,20 @@ authRoutes.post('/login', async (req: Request, res: Response): Promise<void> => 
   const hash = user?.password ?? '$2b$12$invalidhashpaddingtoensureconstanttime00000000000000000';
   const valid = await bcrypt.compare(password, hash);
 
-  if (!user || !valid || !user.password) {
+  if (!user) {
+    res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect.' });
+    return;
+  }
+
+  if (!user.password) {
+    res.status(401).json({
+      success: false,
+      error: 'Ce compte utilise la connexion Google. Connectez-vous avec Google.',
+    });
+    return;
+  }
+
+  if (!valid) {
     res.status(401).json({ success: false, error: 'Email ou mot de passe incorrect.' });
     return;
   }
@@ -176,6 +200,15 @@ authRoutes.get('/google/callback', async (req: Request, res: Response): Promise<
       name: string;
       picture?: string;
     };
+
+    const banned = await prisma.blacklistedEmail.findUnique({
+      where: { email: profile.email.toLowerCase() },
+      select: { id: true },
+    });
+    if (banned) {
+      res.redirect(`${FRONTEND_URL}?auth=banned`);
+      return;
+    }
 
     const user = await upsertGoogleUser({
       googleId: profile.id,

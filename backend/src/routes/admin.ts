@@ -52,6 +52,29 @@ adminRoutes.get('/users', async (req: Request, res: Response): Promise<void> => 
   }
 });
 
+// ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
+adminRoutes.delete('/users/:id', async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (id === req.user!.id) {
+    res.status(400).json({ success: false, error: 'Vous ne pouvez pas supprimer votre propre compte.' });
+    return;
+  }
+
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (!target) {
+    res.status(404).json({ success: false, error: 'Utilisateur introuvable.' });
+    return;
+  }
+  if (target.role === 'ADMIN') {
+    res.status(403).json({ success: false, error: 'Impossible de supprimer un autre administrateur.' });
+    return;
+  }
+
+  await prisma.user.delete({ where: { id } });
+  res.json({ success: true });
+});
+
 // ── PATCH /api/admin/users/:userId/role ───────────────────────────────────────
 const changeRoleSchema = z.object({
   role: z.enum(['USER', 'ADMIN']),
@@ -61,7 +84,6 @@ adminRoutes.patch('/users/:userId/role', async (req: Request, res: Response): Pr
   try {
     const userId = req.params['userId'] as string;
 
-    // Guard: cannot change own role
     if (req.user!.id === userId) {
       res.status(400).json({ success: false, error: 'Vous ne pouvez pas modifier votre propre rôle.' });
       return;
@@ -74,7 +96,6 @@ adminRoutes.patch('/users/:userId/role', async (req: Request, res: Response): Pr
     }
     const { role: newRole } = parsed.data;
 
-    // Guard: cannot demote last admin
     if (newRole === 'USER') {
       const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
       if (adminCount <= 1) {
@@ -139,4 +160,54 @@ adminRoutes.get('/logs', async (req: Request, res: Response): Promise<void> => {
     console.error('[/admin/logs]', err);
     res.status(500).json({ success: false, error: 'Erreur lors de la récupération des logs.' });
   }
+});
+
+// ── GET /api/admin/blacklist ──────────────────────────────────────────────────
+adminRoutes.get('/blacklist', async (_req: Request, res: Response): Promise<void> => {
+  const entries = await prisma.blacklistedEmail.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ success: true, data: { entries } });
+});
+
+// ── POST /api/admin/blacklist ─────────────────────────────────────────────────
+const blacklistSchema = z.object({
+  email: z.string().email('Email invalide').max(255),
+  reason: z.string().max(500).optional(),
+});
+
+adminRoutes.post('/blacklist', async (req: Request, res: Response): Promise<void> => {
+  const parsed = blacklistSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.errors[0].message });
+    return;
+  }
+
+  const { email, reason } = parsed.data;
+  const normalised = email.toLowerCase();
+
+  const existing = await prisma.blacklistedEmail.findUnique({ where: { email: normalised } });
+  if (existing) {
+    res.status(409).json({ success: false, error: 'Cet email est déjà banni.' });
+    return;
+  }
+
+  const entry = await prisma.blacklistedEmail.create({
+    data: { email: normalised, reason: reason ?? null, bannedBy: req.user!.id },
+  });
+  res.status(201).json({ success: true, data: { entry } });
+});
+
+// ── DELETE /api/admin/blacklist/:id ──────────────────────────────────────────
+adminRoutes.delete('/blacklist/:id', async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  const existing = await prisma.blacklistedEmail.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    res.status(404).json({ success: false, error: 'Entrée introuvable.' });
+    return;
+  }
+
+  await prisma.blacklistedEmail.delete({ where: { id } });
+  res.json({ success: true });
 });

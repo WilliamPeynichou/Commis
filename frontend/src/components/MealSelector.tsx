@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed, Clock, Heart, MessageSquare } from 'lucide-react';
+import { ChefHat, Users, Minus, Plus, Sparkles, UtensilsCrossed, Clock, Heart, MessageSquare, Salad } from 'lucide-react';
 import { BrutalButton } from './ui/BrutalButton';
 import { BrutalSlider } from './ui/BrutalSlider';
 import { ExclusionTags } from './ExclusionTags';
-import type { GenerateRecipesRequest, CategoryDistribution, TimeFilter } from '@shared/index';
+import { getDiets } from '../lib/dietsApi';
+import type { GenerateRecipesRequest, CategoryDistribution, TimeFilter, Diet } from '@shared/index';
 
 interface MealSelectorProps {
   onGenerate: (request: GenerateRecipesRequest) => void;
@@ -86,6 +87,18 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('any');
   const [healthy, setHealthy] = useState(false);
   const [freeText, setFreeText] = useState('');
+  const [diets, setDiets] = useState<Diet[]>([]);
+  const [selectedDietIds, setSelectedDietIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDiets().then(setDiets).catch(() => {});
+  }, []);
+
+  function toggleDiet(id: string) {
+    setSelectedDietIds((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  }
 
   const totalCategories = categories.economique + categories.gourmand + categories.plaisir;
   const isValid = totalCategories === mealsCount;
@@ -110,7 +123,16 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
 
   const handleSubmit = () => {
     if (!isValid) return;
-    onGenerate({ mealsCount, categories, personsCount, excludedTags, timeFilter, healthy, freeText: freeText.trim() || undefined });
+    onGenerate({
+      mealsCount,
+      categories,
+      personsCount,
+      excludedTags,
+      timeFilter,
+      healthy,
+      dietIds: selectedDietIds.length > 0 ? selectedDietIds : undefined,
+      freeText: freeText.trim() || undefined,
+    });
   };
 
   return (
@@ -319,6 +341,44 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
           </div>
         </button>
       </div>
+
+      {/* Régimes alimentaires */}
+      {diets.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Salad size={16} strokeWidth={2.5} className="text-deep-black/50" />
+            <span className="font-bold text-sm uppercase tracking-wide text-deep-black/60">
+              Régime alimentaire
+            </span>
+            <span className="text-xs text-deep-black/30 font-medium ml-1">(multi-sélection)</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {diets.map((diet) => {
+              const active = selectedDietIds.includes(diet.id);
+              return (
+                <button
+                  key={diet.id}
+                  onClick={() => toggleDiet(diet.id)}
+                  title={diet.description}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-sm font-semibold transition-all
+                    ${active
+                      ? 'border-deep-black bg-mint shadow-[0_3px_0_0_rgba(26,26,26,0.5)] -translate-y-0.5'
+                      : 'border-deep-black/20 bg-white hover:border-deep-black/40 hover:bg-mint/15'
+                    }`}
+                >
+                  <span>{diet.emoji}</span>
+                  <span>{diet.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {selectedDietIds.length > 0 && (
+            <p className="text-xs text-deep-black/40 font-medium">
+              {selectedDietIds.length} régime{selectedDietIds.length > 1 ? 's' : ''} actif{selectedDietIds.length > 1 ? 's' : ''} — Claude respectera ces contraintes lors de la génération.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Divider */}
       <div className="flex items-center gap-4">

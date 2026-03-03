@@ -7,6 +7,13 @@ import type {
   TimeFilter,
 } from '@recipe-planner/shared';
 
+export interface DietInfo {
+  name: string;
+  emoji: string;
+  description: string;
+  forbiddenIngredients: string[];
+}
+
 const MODEL = 'claude-haiku-4-5-20251001';
 
 function getClient(): Anthropic {
@@ -61,7 +68,18 @@ function buildHealthyConstraint(healthy?: boolean): string {
   return `CONTRAINTE SANTÉ : Les recettes doivent être équilibrées et bonnes pour la santé. Privilégier les légumes frais, protéines maigres (poulet, poisson, légumineuses), grains complets et bonnes graisses (huile d'olive, avocat, noix). Limiter les graisses saturées, le sucre ajouté et les produits ultra-transformés.`;
 }
 
-function buildGeneratePrompt(request: GenerateRecipesRequest): string {
+function buildDietConstraints(diets: DietInfo[]): string {
+  if (!diets.length) return '';
+  const parts = diets.map((d) => {
+    const forbidden = d.forbiddenIngredients.length
+      ? `Ingrédients STRICTEMENT INTERDITS : ${d.forbiddenIngredients.join(', ')}.`
+      : '';
+    return `CONTRAINTE RÉGIME ${d.emoji} ${d.name.toUpperCase()} : ${d.description} ${forbidden}`.trim();
+  });
+  return parts.join('\n\n');
+}
+
+function buildGeneratePrompt(request: GenerateRecipesRequest, diets: DietInfo[] = []): string {
   const { mealsCount, categories, personsCount, timeFilter, healthy } = request;
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
   const previousRecipeNames = request.previousRecipeNames ?? [];
@@ -69,6 +87,7 @@ function buildGeneratePrompt(request: GenerateRecipesRequest): string {
 
   const timeConstraint = buildTimeConstraint(timeFilter);
   const healthyConstraint = buildHealthyConstraint(healthy);
+  const dietConstraints = buildDietConstraints(diets);
 
   const diversityConstraint = previousRecipeNames.length > 0
     ? `CONTRAINTE DE DIVERSITÉ ABSOLUE : Ces recettes ont déjà été proposées — tu DOIS proposer des recettes entièrement différentes avec d'autres plats, d'autres ingrédients principaux et d'autres cuisines : ${previousRecipeNames.join(', ')}`
@@ -77,6 +96,8 @@ function buildGeneratePrompt(request: GenerateRecipesRequest): string {
   return `Tu es un chef cuisinier expert en planification de repas hebdomadaires équilibrés et économiques en France.
 
 ${diversityConstraint}
+
+${dietConstraints}
 
 Génère exactement ${mealsCount} recettes avec la répartition suivante :
 - ${categories.economique} recette(s) "économique" (budget < 5€ par personne)
@@ -135,7 +156,7 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans tex
 }`;
 }
 
-function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
+function buildRegeneratePrompt(request: RegenerateRecipeRequest, diets: DietInfo[] = []): string {
   const { category, personsCount, timeFilter, healthy } = request;
   const excludedTags = request.excludedTags.map(sanitizeTag).filter(Boolean);
   const currentRecipeName = request.currentRecipeName;
@@ -151,6 +172,7 @@ function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
 
   const timeConstraint = buildTimeConstraint(timeFilter);
   const healthyConstraint = buildHealthyConstraint(healthy);
+  const dietConstraints = buildDietConstraints(diets);
 
   const recipesToAvoid = [
     ...(currentRecipeName ? [currentRecipeName] : []),
@@ -164,6 +186,8 @@ function buildRegeneratePrompt(request: RegenerateRecipeRequest): string {
   return `Tu es un chef cuisinier expert. Génère UNE SEULE nouvelle recette de catégorie "${category}" (budget : ${budgetRange}).
 
 ${diversityConstraint}
+
+${dietConstraints}
 
 Nombre de personnes : ${personsCount}
 
@@ -212,8 +236,8 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) :
 }`;
 }
 
-export async function generateRecipes(request: GenerateRecipesRequest): Promise<Recipe[]> {
-  const prompt = buildGeneratePrompt(request);
+export async function generateRecipes(request: GenerateRecipesRequest, diets: DietInfo[] = []): Promise<Recipe[]> {
+  const prompt = buildGeneratePrompt(request, diets);
 
   const message = await getClient().messages.create({
     model: MODEL,
@@ -236,8 +260,8 @@ export async function generateRecipes(request: GenerateRecipesRequest): Promise<
   return parsed.recipes as Recipe[];
 }
 
-export async function regenerateRecipe(request: RegenerateRecipeRequest): Promise<Recipe> {
-  const prompt = buildRegeneratePrompt(request);
+export async function regenerateRecipe(request: RegenerateRecipeRequest, diets: DietInfo[] = []): Promise<Recipe> {
+  const prompt = buildRegeneratePrompt(request, diets);
 
   const message = await getClient().messages.create({
     model: MODEL,

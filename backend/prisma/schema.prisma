@@ -25,6 +25,7 @@ model User {
 
   recipeHistory RecipeHistory[]
   weeklyMenus   WeeklyMenu[]
+  favorites     Favorite[]
 }
 
 model RecipeHistory {
@@ -45,17 +46,40 @@ model RecipeHistory {
 model Recipe {
   id              String   @id @default(cuid())
   name            String
+  description     String?
   category        String
   preparationTime Int
   ingredients     Json
   steps           String[]
   pricePerPerson  Float
   nutrition       Json
+  userId          String?  // who generated it
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   weeklyMenu   WeeklyMenu? @relation(fields: [weeklyMenuId], references: [id])
   weeklyMenuId String?
+  favorites    Favorite[]
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+}
+
+model Diet {
+  id                   String @id @default(cuid())
+  name                 String @unique
+  emoji                String
+  description          String
+  forbiddenIngredients Json   // String[]
 }
 
 model WeeklyMenu {
@@ -75,6 +99,14 @@ model ExcludedTag {
   userId String?
 
   @@unique([name, userId])
+}
+
+model BlacklistedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  bannedBy  String   // admin user id
+  createdAt DateTime @default(now())
 }
 
 model AdminLog {

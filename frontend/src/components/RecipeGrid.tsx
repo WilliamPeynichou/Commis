@@ -11,6 +11,8 @@ interface RecipeGridProps {
   onRegenerateAll: () => void;
   regeneratingIndex: number | null;
   isRegeneratingAll: boolean;
+  favoritedIds?: Set<string>;
+  onToggleFavorite?: (recipe: Recipe) => void;
 }
 
 export function RecipeGrid({
@@ -19,6 +21,8 @@ export function RecipeGrid({
   onRegenerateAll,
   regeneratingIndex,
   isRegeneratingAll,
+  favoritedIds,
+  onToggleFavorite,
 }: RecipeGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +102,8 @@ export function RecipeGrid({
               index={index}
               onRegenerate={onRegenerateOne}
               isRegenerating={regeneratingIndex === index}
+              isFavorited={favoritedIds?.has(recipe.id)}
+              onToggleFavorite={onToggleFavorite}
             />
           </div>
         ))}
