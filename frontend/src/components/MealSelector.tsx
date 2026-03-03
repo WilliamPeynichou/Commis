@@ -322,7 +322,7 @@ export function MealSelector({ onGenerate, isLoading }: MealSelectorProps) {
             </motion.div>
             <div className="text-left">
               <p className={`font-bold text-sm ${healthy ? 'text-deep-black' : 'text-deep-black/60'}`}>
-                Mode Healthy
+                Mode Sain
               </p>
               <p className="text-xs text-deep-black/40 font-medium mt-0.5">
                 Recettes équilibrées, riches en légumes et protéines maigres

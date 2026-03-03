@@ -71,6 +71,15 @@ export function generateShoppingList(recipes: Recipe[], personsCount: number): S
 
       const baseQty = toBaseQuantity(ingredient.quantity, normalizedUnit);
 
+      // Fallback to 'autre' if Claude returns a category outside the valid set
+      const validCategories: ShoppingCategory[] = [
+        'fruits-legumes', 'viandes-poissons', 'produits-laitiers', 'epicerie',
+        'boulangerie', 'surgeles', 'boissons', 'condiments', 'autre',
+      ];
+      const safeCategory: ShoppingCategory = validCategories.includes(ingredient.category as ShoppingCategory)
+        ? (ingredient.category as ShoppingCategory)
+        : 'autre';
+
       if (ingredientMap.has(key)) {
         ingredientMap.get(key)!.baseQuantity += baseQty;
       } else {
@@ -79,7 +88,7 @@ export function generateShoppingList(recipes: Recipe[], personsCount: number): S
           baseQuantity: baseQty,
           family,
           normalizedUnit,
-          category: ingredient.category,
+          category: safeCategory,
         });
       }
     }

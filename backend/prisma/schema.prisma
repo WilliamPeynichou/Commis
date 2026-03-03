@@ -108,3 +108,15 @@ model BlacklistedEmail {
   bannedBy  String   // admin user id
   createdAt DateTime @default(now())
 }
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  targetId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}

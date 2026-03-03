@@ -35,6 +35,9 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── App ───────────────────────────────────────────────────────────────────────
 const app = express();
 
+// Trust Railway's reverse proxy so express-rate-limit can read the real client IP
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 // CORS — credentials: true required for HttpOnly cookie auth
@@ -44,7 +47,7 @@ app.use(cors({
     if (origin === FRONTEND_URL) return callback(null, true);
     callback(new Error('CORS: origin not allowed'));
   },
-  methods: ['GET', 'POST', 'DELETE'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'X-Session-Id', 'Authorization'],
   credentials: true,
 }));
@@ -81,6 +84,14 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Trop de tentatives, réessayez dans 15 minutes.' },
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Limite admin atteinte, réessayez dans une minute.' },
+});
+
 app.use(globalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
@@ -90,7 +101,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/recipes', claudeLimiter, recipeRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminLimiter, adminRoutes);
 app.use('/api/diets', dietRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────

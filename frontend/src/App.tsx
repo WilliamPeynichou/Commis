@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { MealSelector } from './components/MealSelector';
 import { RecipeGrid } from './components/RecipeGrid';
@@ -10,6 +11,7 @@ import { Spinner } from './components/ui/Spinner';
 import { BrutalToaster } from './components/ui/BrutalToast';
 import { AuthModal } from './components/AuthModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminDashboard } from './pages/AdminDashboard';
 import * as api from './lib/api';
 import { getFavorites, addFavorite, removeFavorite } from './lib/favoritesApi';
 import type {
@@ -72,8 +74,9 @@ function AppContent() {
     try {
       const result = await api.generateShoppingList({ recipes: updatedRecipes, personsCount });
       setShoppingList(result);
-    } catch {
-      // Shopping list update is non-critical, silently fail
+    } catch (err) {
+      console.error('[shopping-list]', err);
+      toast.error('La liste de courses n\'a pas pu être générée.');
     }
   }, []);
 
@@ -276,7 +279,7 @@ function AppContent() {
             ))}
           </div>
           <p className="font-semibold text-deep-black/30 text-sm">
-            Recipe Planner — Propulsé par Claude AI
+            Commis — Propulsé par Claude AI
           </p>
         </div>
       </footer>
@@ -284,10 +287,27 @@ function AppContent() {
   );
 }
 
+function ProtectedAdminRoute() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-off-white">
+      <div className="w-8 h-8 border-4 border-mauve border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (!user || user.role !== 'ADMIN') return <Navigate to="/" replace />;
+  return <AdminDashboard />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/admin" element={<ProtectedAdminRoute />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
   );
 }
