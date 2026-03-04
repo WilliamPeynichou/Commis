@@ -43,6 +43,10 @@ export async function apiLogout(): Promise<void> {
   await fetch(`${AUTH_BASE}/logout`, { method: 'POST', credentials: 'include' });
 }
 
+export async function apiExchange(token: string): Promise<User> {
+  return authRequest('/exchange', { token });
+}
+
 export function getGoogleAuthUrl(): string {
   return '/api/auth/google';
 }

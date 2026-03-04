@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { apiMe, apiLogin, apiRegister, apiLogout, getGoogleAuthUrl } from '../lib/authApi';
+import { apiMe, apiLogin, apiRegister, apiLogout, apiExchange, getGoogleAuthUrl } from '../lib/authApi';
 import type { User } from '../lib/authApi';
 
 interface AuthState {
@@ -32,14 +32,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const authResult = params.get('auth');
+    const exchangeToken = params.get('t');
 
     const init = async () => {
-      await refreshUser();
+      if (authResult === 'success' && exchangeToken) {
+        // Exchange the one-time OAuth token for a real session cookie.
+        // This request goes through the frontend proxy so the cookie is set
+        // on the frontend's domain (not the backend's).
+        try {
+          const u = await apiExchange(exchangeToken);
+          setUser(u);
+        } catch {
+          setUser(null);
+        }
+      } else {
+        await refreshUser();
+      }
       setIsLoading(false);
-      // Clean the ?auth= query param from the URL without a reload
-      if (authResult) {
+      // Clean query params from the URL without a reload
+      if (authResult || exchangeToken) {
         const url = new URL(window.location.href);
         url.searchParams.delete('auth');
+        url.searchParams.delete('t');
         window.history.replaceState({}, '', url.toString());
       }
     };

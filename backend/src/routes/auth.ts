@@ -8,6 +8,8 @@ import {
   clearAuthCookie,
   createOAuthState,
   verifyOAuthState,
+  createExchangeToken,
+  verifyExchangeToken,
 } from '../lib/auth';
 import { requireAuth } from '../middleware/authenticate';
 import {
@@ -222,11 +224,41 @@ authRoutes.get('/google/callback', async (req: Request, res: Response): Promise<
       avatarUrl: safeAvatarUrl,
     });
 
-    const token = signJWT({ sub: user.id, role: user.role });
-    setAuthCookie(res, token);
-    res.redirect(`${FRONTEND_URL}?auth=success`);
+    // Generate a short-lived exchange token instead of setting the cookie here.
+    // The cookie must be set through the frontend proxy so it is stored on the
+    // frontend domain — not on the backend domain (which would make it invisible
+    // to subsequent same-origin API calls from the frontend).
+    const exchangeToken = createExchangeToken(user.id, user.role);
+    res.redirect(`${FRONTEND_URL}?auth=success&t=${exchangeToken}`);
   } catch (err) {
     console.error('[Google OAuth callback]', err);
     res.redirect(`${FRONTEND_URL}?auth=error`);
   }
+});
+
+// ── POST /api/auth/exchange ────────────────────────────────────────────────────
+// Validates the short-lived OAuth exchange token and sets the real auth cookie.
+// Called by the frontend through its own proxy so the cookie lands on the right domain.
+authRoutes.post('/exchange', async (req: Request, res: Response): Promise<void> => {
+  const { token } = req.body;
+  if (!token || typeof token !== 'string') {
+    res.status(400).json({ success: false, error: 'Token manquant.' });
+    return;
+  }
+
+  const payload = verifyExchangeToken(token);
+  if (!payload) {
+    res.status(401).json({ success: false, error: 'Token invalide ou expiré.' });
+    return;
+  }
+
+  const user = await findUserById(payload.sub);
+  if (!user) {
+    res.status(401).json({ success: false, error: 'Utilisateur introuvable.' });
+    return;
+  }
+
+  const authToken = signJWT({ sub: user.id, role: user.role });
+  setAuthCookie(res, authToken);
+  res.json({ success: true, data: { user } });
 });

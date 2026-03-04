@@ -59,6 +59,27 @@ export function extractTokenFromRequest(req: {
   return null;
 }
 
+// ── OAuth exchange token (short-lived, used once to set cookie via frontend proxy) ─────
+const EXCHANGE_TOKEN_DURATION_S = 5 * 60; // 5 minutes
+
+export function createExchangeToken(userId: string, role: Role): string {
+  return jwt.sign(
+    { sub: userId, role, type: 'oauth_exchange' },
+    JWT_SECRET,
+    { expiresIn: EXCHANGE_TOKEN_DURATION_S, algorithm: 'HS256' },
+  );
+}
+
+export function verifyExchangeToken(token: string): JwtPayload | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload & { type?: string };
+    if (payload.type !== 'oauth_exchange') return null;
+    return { sub: payload.sub, role: payload.role };
+  } catch {
+    return null;
+  }
+}
+
 // ── Google OAuth state (CSRF protection without sessions) ────────────────────
 export function createOAuthState(): string {
   const nonce = randomBytes(16).toString('hex');
