@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ChevronDown, Shield, Settings, Heart } from 'lucide-react';
+import { LogOut, ChevronDown, Shield, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { AdminPanel } from './AdminPanel';
 import { FavoritesPanel } from './FavoritesPanel';
 import { toast } from 'sonner';
 
@@ -11,7 +10,6 @@ export function UserMenu() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -32,11 +30,6 @@ export function UserMenu() {
     setOpen(false);
     await logout();
     toast.success('Déconnecté');
-  }
-
-  function handleOpenAdmin() {
-    setOpen(false);
-    setShowAdmin(true);
   }
 
   function handleOpenFavorites() {
@@ -109,21 +102,12 @@ export function UserMenu() {
                   Mes favoris
                 </button>
                 {user.role === 'ADMIN' && (
-                  <>
-                    <button
-                      onClick={handleOpenAdmin}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-deep-black/70 hover:text-dark-orange hover:bg-dark-orange/5 rounded-xl transition-colors"
-                    >
-                      <Settings size={14} strokeWidth={2.5} />
-                      Panneau admin
-                    </button>
-                    <button
-                      onClick={() => { navigate('/admin'); setOpen(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-dark-orange hover:bg-dark-orange/5 rounded-xl transition-colors"
-                    >
-                      Dashboard Admin
-                    </button>
-                  </>
+                  <button
+                    onClick={() => { navigate('/admin'); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-dark-orange hover:bg-dark-orange/5 rounded-xl transition-colors"
+                  >
+                    Dashboard Admin
+                  </button>
                 )}
                 <button
                   onClick={handleLogout}
@@ -140,9 +124,6 @@ export function UserMenu() {
 
       <AnimatePresence>
         {showFavorites && <FavoritesPanel onClose={() => setShowFavorites(false)} />}
-      </AnimatePresence>
-      <AnimatePresence>
-        {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
       </AnimatePresence>
     </>
   );

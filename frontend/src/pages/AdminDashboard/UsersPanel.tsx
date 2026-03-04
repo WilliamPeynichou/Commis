@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Shield, User, ChefHat, Chrome } from 'lucide-react';
+import { Search, Shield, User, ChefHat, Chrome, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchAdminUsers, patchUserRole, type AdminUser } from '../../lib/adminApi';
+import { fetchAdminUsers, patchUserRole, adminDeleteUser, type AdminUser } from '../../lib/adminApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -13,6 +14,7 @@ function useDebounce(value: string, delay: number) {
 }
 
 export function UsersPanel() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
@@ -38,6 +40,17 @@ export function UsersPanel() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter]);
+
+  async function handleDeleteUser(u: AdminUser) {
+    if (!window.confirm(`Supprimer le compte de "${u.username}" ? Cette action est irréversible.`)) return;
+    try {
+      await adminDeleteUser(u.id);
+      toast.success(`Compte de ${u.username} supprimé`);
+      load();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    }
+  }
 
   async function handleRoleChange(user: AdminUser) {
     const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
@@ -140,16 +153,27 @@ export function UsersPanel() {
                       {new Date(u.createdAt).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleRoleChange(u)}
-                        className={`text-xs font-bold px-2.5 py-1 rounded-lg border-2 border-deep-black transition-colors ${
-                          u.role === 'ADMIN'
-                            ? 'bg-blush/40 hover:bg-blush/70 text-deep-black'
-                            : 'bg-mint/40 hover:bg-mint/70 text-deep-black'
-                        }`}
-                      >
-                        {u.role === 'ADMIN' ? '↓ User' : '↑ Admin'}
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleRoleChange(u)}
+                          className={`text-xs font-bold px-2.5 py-1 rounded-lg border-2 border-deep-black transition-colors ${
+                            u.role === 'ADMIN'
+                              ? 'bg-blush/40 hover:bg-blush/70 text-deep-black'
+                              : 'bg-mint/40 hover:bg-mint/70 text-deep-black'
+                          }`}
+                        >
+                          {u.role === 'ADMIN' ? '↓ User' : '↑ Admin'}
+                        </button>
+                        {u.id !== currentUser?.id && u.role !== 'ADMIN' && (
+                          <button
+                            onClick={() => handleDeleteUser(u)}
+                            className="p-1.5 text-deep-black/30 hover:text-dark-orange hover:bg-dark-orange/10 rounded-lg border-2 border-deep-black/10 hover:border-dark-orange/30 transition-colors"
+                            title="Supprimer ce compte"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

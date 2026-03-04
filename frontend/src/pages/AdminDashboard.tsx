@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart2, Users, Activity, Shield } from 'lucide-react';
+import { ArrowLeft, BarChart2, Users, Activity, Shield, ShieldOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { StatsPanel } from './AdminDashboard/StatsPanel';
 import { UsersPanel } from './AdminDashboard/UsersPanel';
 import { ActivityPanel } from './AdminDashboard/ActivityPanel';
+import { BlacklistPanel } from './AdminDashboard/BlacklistPanel';
 
-type Tab = 'stats' | 'users' | 'activity';
+type Tab = 'stats' | 'users' | 'activity' | 'blacklist';
 
 const TABS: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: 'stats', label: 'Statistiques', icon: <BarChart2 size={15} strokeWidth={2.5} /> },
   { id: 'users', label: 'Utilisateurs', icon: <Users size={15} strokeWidth={2.5} /> },
   { id: 'activity', label: 'Activité', icon: <Activity size={15} strokeWidth={2.5} /> },
+  { id: 'blacklist', label: 'Blacklist', icon: <ShieldOff size={15} strokeWidth={2.5} /> },
 ];
 
 export function AdminDashboard() {
@@ -84,6 +86,7 @@ export function AdminDashboard() {
           {activeTab === 'stats' && <StatsPanel />}
           {activeTab === 'users' && <UsersPanel />}
           {activeTab === 'activity' && <ActivityPanel />}
+          {activeTab === 'blacklist' && <BlacklistPanel />}
         </motion.div>
       </main>
     </div>
