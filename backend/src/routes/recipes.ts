@@ -13,7 +13,6 @@ import {
   regenerateRecipeSchema,
   shoppingListSchema,
 } from '../middleware/validation';
-import { requireAuth } from '../middleware/authenticate';
 
 export const recipeRoutes = Router();
 
@@ -203,7 +202,7 @@ recipeRoutes.post('/favorites', requireAuth, async (req: Request, res: Response)
 
 recipeRoutes.delete('/favorites/:recipeId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   await prisma.favorite.deleteMany({
-    where: { userId: req.user!.id, recipeId: req.params.recipeId },
+    where: { userId: req.user!.id, recipeId: req.params.recipeId as string },
   });
   res.json({ success: true });
 });

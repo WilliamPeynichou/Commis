@@ -54,7 +54,7 @@ adminRoutes.get('/users', async (req: Request, res: Response): Promise<void> => 
 
 // ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
 adminRoutes.delete('/users/:id', async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   if (id === req.user!.id) {
     res.status(400).json({ success: false, error: 'Vous ne pouvez pas supprimer votre propre compte.' });
@@ -200,7 +200,7 @@ adminRoutes.post('/blacklist', async (req: Request, res: Response): Promise<void
 
 // ── DELETE /api/admin/blacklist/:id ──────────────────────────────────────────
 adminRoutes.delete('/blacklist/:id', async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   const existing = await prisma.blacklistedEmail.findUnique({ where: { id }, select: { id: true } });
   if (!existing) {
