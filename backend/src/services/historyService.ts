@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 
 const DB_ENABLED = !!process.env.DATABASE_URL;
-const HISTORY_LIMIT = 100;
+const HISTORY_LIMIT = 500;
 
 interface HistoryTarget {
   userId: string | null;

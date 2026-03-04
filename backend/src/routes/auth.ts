@@ -210,11 +210,16 @@ authRoutes.get('/google/callback', async (req: Request, res: Response): Promise<
       return;
     }
 
+    const safeAvatarUrl =
+      typeof profile.picture === 'string' && /^https:\/\//.test(profile.picture)
+        ? profile.picture
+        : undefined;
+
     const user = await upsertGoogleUser({
       googleId: profile.id,
       email: profile.email,
       suggestedUsername: profile.name,
-      avatarUrl: profile.picture,
+      avatarUrl: safeAvatarUrl,
     });
 
     const token = signJWT({ sub: user.id, role: user.role });

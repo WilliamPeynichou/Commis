@@ -57,6 +57,7 @@ function AppContent() {
       }
     }
   }, [favoritedIds]);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);

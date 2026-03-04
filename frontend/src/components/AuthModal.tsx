@@ -24,8 +24,11 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
 
   const clearError = () => setError('');
 
+  const usernameInvalid = tab === 'register' && username.length > 0 && !/^[a-zA-Z0-9_]+$/.test(username);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (usernameInvalid) return;
     setIsLoading(true);
     setError('');
     try {
@@ -34,9 +37,9 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
         return;
       }
       if (tab === 'login') {
-        await login(email, password);
+        await login(email.trim(), password);
       } else {
-        await register(username, email, password);
+        await register(username.trim(), email.trim(), password);
       }
       onClose();
     } catch (err) {
@@ -142,9 +145,17 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
                       placeholder="mon_pseudo"
                       required={tab === 'register'}
                       autoComplete="username"
-                      className="w-full pl-10 pr-4 py-3 bg-white border-2 border-deep-black/15 rounded-2xl text-sm font-medium placeholder:text-deep-black/25 focus:outline-none focus:border-mauve transition-colors"
+                      maxLength={30}
+                      className={`w-full pl-10 pr-4 py-3 bg-white border-2 rounded-2xl text-sm font-medium placeholder:text-deep-black/25 focus:outline-none transition-colors ${
+                        usernameInvalid ? 'border-dark-orange focus:border-dark-orange' : 'border-deep-black/15 focus:border-mauve'
+                      }`}
                     />
                   </div>
+                  {usernameInvalid && (
+                    <p className="text-xs font-medium text-dark-orange mt-1">
+                      Lettres, chiffres et _ uniquement
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -162,6 +173,7 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
                   placeholder="jade@example.com"
                   required
                   autoComplete="email"
+                  maxLength={255}
                   className="w-full pl-10 pr-4 py-3 bg-white border-2 border-deep-black/15 rounded-2xl text-sm font-medium placeholder:text-deep-black/25 focus:outline-none focus:border-mauve transition-colors"
                 />
               </div>
@@ -180,6 +192,7 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
                   placeholder={tab === 'register' ? 'Min. 8 caractères, 1 lettre, 1 chiffre' : '••••••••'}
                   required
                   autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                  maxLength={128}
                   className="w-full pl-10 pr-10 py-3 bg-white border-2 border-deep-black/15 rounded-2xl text-sm font-medium placeholder:text-deep-black/25 focus:outline-none focus:border-mauve transition-colors"
                 />
                 <button
@@ -246,9 +259,9 @@ export function AuthModal({ onClose, initialTab = 'login' }: AuthModalProps) {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || usernameInvalid}
               className="w-full py-3 bg-mauve font-bold text-deep-black rounded-2xl border-2 border-deep-black transition-all hover:bg-mauve-dark disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: isLoading ? 'none' : '0 4px 0 0 rgba(26,26,26,0.8)' }}
+              style={{ boxShadow: isLoading || usernameInvalid ? 'none' : '0 4px 0 0 rgba(26,26,26,0.8)' }}
             >
               {isLoading
                 ? 'Chargement...'

@@ -13,6 +13,7 @@ import {
   regenerateRecipeSchema,
   shoppingListSchema,
 } from '../middleware/validation';
+import { requireAuth } from '../middleware/authenticate';
 
 export const recipeRoutes = Router();
 
@@ -41,6 +42,7 @@ async function resolveDiets(dietIds?: string[]): Promise<DietInfo[]> {
 
 recipeRoutes.post(
   '/generate',
+  requireAuth,
   validate(generateRecipesSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -92,6 +94,7 @@ recipeRoutes.post(
 
 recipeRoutes.post(
   '/regenerate',
+  requireAuth,
   validate(regenerateRecipeSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
